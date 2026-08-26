@@ -1,0 +1,6 @@
+# Register the stable SoftSpark Codex provider. The adapter delegates account
+# state, model discovery, built-in tools, and turns to the local `codex
+# app-server` process; it never reads or stores Codex authentication files.
+- insert:
+    - id: llm-codex
+      name: '@softspark/dsh-codex'
