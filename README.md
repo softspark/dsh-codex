@@ -106,7 +106,7 @@ Codex app-server built-in tools run inside Codex under the selected Codex sandbo
 
 By default, DSH tools remain unavailable and tool-result continuation fails closed. With `experimentalDynamicTools: true`, the adapter registers the current DSH tool catalog with Codex, emits canonical DSH tool-call chunks, lets the normal DSH agent loop execute the tool, then returns the correlated text result to the same Codex turn. The bridge never executes DSH tools directly.
 
-The opt-in bridge is text-only, bounded, unavailable for ephemeral sessions, and fails closed if a process restart loses a pending call. Use the sibling `@softspark/dsh-orchestrator` bundle to register subscription-backed Claude Code and Gemini ACP delegation tools.
+The opt-in bridge is text-only, bounded, unavailable for ephemeral sessions, and does not support thread replay after a process restart. Use the sibling `@softspark/dsh-orchestrator` bundle to register subscription-backed Claude Code and Gemini ACP delegation tools.
 
 ## Security boundaries
 

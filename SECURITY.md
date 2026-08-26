@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-`@softspark/dsh-codex` has not been published. Version `0.1.0` is under development and receives security fixes on `main`.
+`@softspark/dsh-codex` has not been published. Version `0.2.0` is under development and receives security fixes on `main`.
 
 ## Reporting a vulnerability
 
@@ -34,13 +34,13 @@ Every app-server response, notification, and server request is untrusted. Runtim
 
 Parsers must bound line size, pending requests, buffered output, and tool-result size. Protocol failures close stdin, send TERM, and escalate to KILL after the bounded shutdown timeout. Incoming server-request handlers use the request timeout and receive an abort signal. A result plus error-reply double failure rejects pending work and closes the client without an unhandled rejection.
 
-Valid same-provider replay state may resume a Codex thread after plugin restart. The adapter validates the newest same-provider assistant state, then skips input through the last historical user message. An invalid newest state never falls back to an older thread. Foreign-provider, malformed, and ephemeral replay starts a new thread instead. In-memory session state uses a 256-entry inactive-session LRU and restores evicted sessions from durable replay.
+In stable mode, valid same-provider replay state may resume a Codex thread after plugin restart. The adapter validates the newest same-provider assistant state and never falls back to an older thread. Dynamic-tool threads are process-local and never resume after restart, even when no call was pending; their replay fails closed with `DYNAMIC_TOOL_REPLAY_UNSUPPORTED`.
 
 ### Tool boundary
 
 Experimental dynamic tools are disabled by default. When explicitly enabled, catalog names, descriptions, schemas, arguments, call IDs, pending counts, per-turn counts, result batches, and timeouts are bounded. Results are validated as one atomic text-only batch before any app-server response. DSH remains the sole tool executor under its normal agent, sandbox, approval, logging, and persistence path.
 
-A pending dynamic turn cannot be restored after process loss. Restart-time tool results fail closed instead of being attached to an older or different Codex turn. Aborts, handler timeouts, invalid batches, and adapter close reject every pending call and interrupt the Codex turn exactly once.
+A dynamic-tool thread cannot be restored after process loss. Restart-time continuation fails closed instead of attaching tools or results to an older or different Codex turn. Aborts, handler timeouts, invalid batches, and adapter close reject every pending call and interrupt the Codex turn exactly once.
 
 ### Network and telemetry
 

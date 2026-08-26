@@ -35,7 +35,7 @@ OpenAI states that Codex caches login details in `CODEX_HOME` or the OS credenti
 | Executable launch | PATH substitution, shell injection, or ambient secret inheritance. | Direct spawn with a fixed argument vector, `shell: false`, and a minimal environment allowlist. GitHub, AWS, npm, Anthropic, OpenAI, and arbitrary project secrets are dropped even when `allowApiKeyAuth` is true. |
 | Child stdout | Malformed JSON, invalid UTF-8, oversized output, protocol desynchronization. | Fatal UTF-8 decoding, JSON-object validation, 8 MiB line limit, and fail-closed connection shutdown. |
 | Child stderr | Secrets or unbounded diagnostics. | Retain at most 64 KiB and redact before error exposure. Never log the environment. |
-| JSON-RPC requests | Hanging process, orphaned work, or failed double replies. | 30 second request and incoming-handler timeout, abort signals, pending rejection, and client closure when both a server-request result and error reply fail. |
+| JSON-RPC requests | Hanging process, orphaned work, or failed double replies. | 30 second outgoing-request timeout; separate bounded dynamic-handler timeout; abort signals, pending rejection, and terminal closure after failed double replies. |
 | Process failure | Malformed protocol leaves a child alive. | Close stdin, send TERM, wait 5 seconds, then send KILL and release listeners. |
 | Replay | Foreign, stale, or malformed thread state crosses sessions. | Accept version 1 replay only from the newest same-provider assistant; require non-empty thread and turn IDs; never fall back to an older replay. |
 | Account data | Accidental token exposure. | Parse only account type and auth booleans. Ignore raw credential data. |
@@ -55,7 +55,7 @@ Tests use synthetic credentials. Secret scanners must distinguish explicit fixtu
 
 ## Replay boundary
 
-Same-provider replay resumes a recorded Codex thread and advances a bounded last-user cursor. The newest same-provider assistant is authoritative. Malformed envelopes, foreign-provider state, and ephemeral requests never resume. The 256-entry state cache evicts only inactive sessions and reconstructs evicted state from durable replay.
+Stable same-provider replay resumes a recorded Codex thread and advances a bounded last-user cursor. The newest same-provider assistant is authoritative. Dynamic-tool threads never resume after process restart because tool catalogs and server requests are process-local; they fail with `DYNAMIC_TOOL_REPLAY_UNSUPPORTED` and require a new session.
 
 ## Sandbox and approvals
 

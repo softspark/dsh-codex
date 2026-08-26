@@ -10,6 +10,10 @@ description: "Selects a bounded two-step bridge from Codex app-server dynamic to
 
 # ADR-002: Opt-in Codex Dynamic Tools Bridge
 
+## Status
+
+Accepted and implemented in 0.2.0.
+
 ## Context
 
 Codex is the subscription-backed primary agent, while Claude Code and Gemini ACP are DSH subagents. Codex can delegate only if DSH tool definitions cross the app-server boundary. Direct tool execution inside the adapter would bypass the DSH agent loop, permissions, logging, and canonical tool-result history.
@@ -18,7 +22,7 @@ Codex is the subscription-backed primary agent, while Claude Code and Gemini ACP
 
 Keep stable mode unchanged and introduce `experimentalDynamicTools: true` as an explicit opt-in. The adapter sends a fixed, bounded tool catalog during `thread/start`. When Codex requests a tool, the adapter emits canonical DSH tool-call chunks and finishes the step with `tool-calls`. DSH executes the tool normally. The next DSH step supplies correlated text results, which are validated as a complete batch before the adapter responds to the waiting app-server request and continues the same Codex turn.
 
-The adapter never invokes DSH tools directly. Invalid or partial batches reject every pending call and interrupt the Codex turn exactly once. Pending dynamic calls are process-local and cannot be replayed after restart.
+The adapter never invokes DSH tools directly. Invalid or partial batches reject every pending call and interrupt the Codex turn exactly once. Dynamic-tool threads are process-local and cannot be replayed after restart, even when no call was pending at shutdown.
 
 ## Controls
 

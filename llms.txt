@@ -20,7 +20,7 @@ Status: 0.2.0 is implemented locally and remains unpublished.
 - Stable JSON-RPC runs over JSONL stdio with `experimentalApi: false` by default.
 - `experimentalDynamicTools: true` enables a bounded, text-only, two-step DSH tool bridge.
 - The adapter emits calls but DSH executes them through its normal agent loop.
-- Pending dynamic state fails closed across process restart.
+- Dynamic-tool threads are non-replayable and fail closed across process restart.
 - Node.js 22.19 or newer is required.
 - The package is source/local-tar only until publication.
 

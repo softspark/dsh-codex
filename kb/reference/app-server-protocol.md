@@ -77,7 +77,7 @@ Unknown or malformed tracer-bullet events fail closed. Error payloads are redact
 
 ## Request lifecycle
 
-Requests use monotonically increasing safe integer IDs. Each request has a default 30 second timeout and accepts an `AbortSignal`. Incoming server-request handlers use the same bound and receive an aborted signal on timeout. Closing the transport rejects pending requests and aborts active server-request handlers.
+Outgoing requests use monotonically increasing safe integer IDs, default to 30 seconds, and accept an `AbortSignal`. Dynamic `item/tool/call` handlers use `dynamicToolTimeoutMs`, default 10 minutes, and receive an aborted signal on timeout. Closing the transport rejects pending requests and aborts active server-request handlers.
 
 Malformed JSON, invalid UTF-8, oversized lines, and handler failures close the connection. Protocol failure closes stdin, sends TERM, waits the bounded shutdown period, and escalates to KILL when the child does not exit.
 
@@ -95,7 +95,7 @@ OpenAI marks `dynamicTools` and `item/tool/call` as experimental. They require `
 
 Version 0.2 enables dynamic tools only when configured. Tool schemas are sent during `thread/start`; `item/tool/call` is translated to the canonical DSH tool-call stream. Codex waits while DSH executes the call, and the next `stream()` returns an atomically validated text result to the same server request.
 
-The bridge bounds 128 tools, 16 pending calls, 128 calls per turn, 256 KiB arguments, 1 MiB result batches, 256-byte call IDs, and a configurable tool timeout. Namespace calls, non-text results, schema drift, mismatched IDs, partial batches, and pending replay after restart fail closed.
+The bridge bounds 128 tools, 16 pending calls, 128 calls per turn, 256 KiB arguments, 1 MiB result batches, 256-byte call IDs, and a configurable tool timeout. Namespace calls, non-text results, schema drift, mismatched IDs, partial batches, and all dynamic-thread replay after restart fail closed.
 
 ## Compatibility rule
 

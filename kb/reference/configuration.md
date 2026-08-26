@@ -43,8 +43,8 @@ The implemented plugin fields are:
 | `approvalPolicy` | `untrusted` | Also accepts `never` and `on-request`. |
 | `allowApiKeyAuth` | `false` | Permits an API-key login already owned by Codex; it does not expose an API key to the plugin or child environment. |
 | `experimentalDynamicTools` | `false` | Enables the experimental DSH tool bridge and app-server experimental API. |
-| `dynamicToolTimeoutMs` | `600000` | Integer from 1,000 through 3,600,000 ms for deferred tool calls. |
-| `requestTimeoutMs` | `30000` | Integer from 1,000 through 300,000 ms; also bounds incoming server-request handlers. |
+| `dynamicToolTimeoutMs` | `600000` | Integer from 1,000 through 3,600,000 ms for deferred tool calls and their incoming server requests. |
+| `requestTimeoutMs` | `30000` | Integer from 1,000 through 300,000 ms for outgoing app-server requests. |
 | `turnTimeoutMs` | `600000` | Integer from 1,000 through 3,600,000 ms. |
 
 Transport controls remain bounded at 8 MiB per JSONL line, 64 KiB retained stderr, and 5 seconds for each TERM/KILL shutdown stage.
@@ -67,7 +67,7 @@ Models come from `model/list`. The adapter preserves upstream model IDs and supp
 
 For a persistent DSH session, the adapter checks the newest assistant message from the same provider for version 1 replay state. A valid envelope or direct replay object resumes the recorded Codex thread and advances a bounded cursor through the last historical user message.
 
-An invalid newest same-provider replay never falls back to an older thread. Malformed replay, replay from another provider, and replay on an ephemeral request start a new thread safely. The in-memory session cache holds at most 256 states, evicts the oldest inactive entry, and restores it from durable DSH replay when needed.
+An invalid newest same-provider replay never falls back to an older thread. Malformed replay, replay from another provider, and replay on an ephemeral request start a new thread safely. Dynamic-tool threads are not replayable after process restart and fail with `DYNAMIC_TOOL_REPLAY_UNSUPPORTED`; create a new DSH session. The in-memory stable-session cache holds at most 256 states and evicts the oldest inactive entry.
 
 ## Forbidden settings
 

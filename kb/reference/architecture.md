@@ -69,7 +69,7 @@ These values are implementation controls, not a stable public configuration cont
 
 Codex is the full agent inside DSH. The adapter forwards text and emits text, reasoning, usage, replay, and finish state. Codex retains its own built-in tools, sandbox, and approvals. Stable mode does not inject DSH tools; opt-in dynamic mode registers a bounded catalog and routes calls back through the standard DSH agent loop.
 
-Persistent sessions resume from a valid newest same-provider version 1 replay envelope or direct replay object after plugin restart. A bounded last-user cursor skips historical input. Invalid, foreign, and ephemeral replay falls back to a new thread, never to an older same-provider replay. The process retains at most 256 session states and evicts only inactive entries.
+Stable persistent sessions resume from a valid newest same-provider version 1 replay envelope or direct replay object after plugin restart. A bounded last-user cursor skips historical input. Dynamic-tool threads are deliberately non-replayable after restart because their registered catalog and server requests are process-local; continuation fails closed and requires a new DSH session.
 
 ## Stable API policy
 

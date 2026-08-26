@@ -62,7 +62,7 @@ Codex built-in tools run internally. Stable mode keeps DSH tools unavailable. Op
 | Generated protocol contract | Codex CLI 0.149.1 TypeScript schema generated and reconciled |
 | Live app-server | `authKind=chatgpt`, seven models |
 | Direct adapter turn | Exact test marker, finish `stop`, usage present |
-| Tarball | 51.8 kB, SHA-256 `6dcfc50389e020d68015945a2222ed5a442d83fb2166efb3a0be905520c04188` |
+| Tarball | 51.8 kB, SHA-256 `be881c535081103df618113970cdc354c18c8a5c355156c100101a0d814258d5` |
 | Isolated DSH install | Local tarball installed and provider loaded |
 | DSH web boot | HTTP 200 |
 | DSH provider catalog | Provider `codex`, seven models |
@@ -121,7 +121,7 @@ Status: verified complete for text and reasoning.
 Status: verified complete.
 
 - [x] Cordis patch and package entry.
-- [x] 51.8 kB local 0.2.0 tarball with SHA-256 `6dcfc50389e020d68015945a2222ed5a442d83fb2166efb3a0be905520c04188`.
+- [x] 51.8 kB local 0.2.0 tarball with SHA-256 `be881c535081103df618113970cdc354c18c8a5c355156c100101a0d814258d5`.
 - [x] Installation into isolated `DSH_HOME`.
 - [x] DSH host supplied Cordis and LLM peer seams despite `autoInstallPeers=false`.
 - [x] DSH web boot returned HTTP 200.
