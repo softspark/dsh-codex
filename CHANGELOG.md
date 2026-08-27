@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - Opt-in app-server `dynamicTools` bridge through the standard DSH tool-result loop.
 - Deferred same-turn continuation, atomic multi-result correlation, catalog snapshot caching, and explicit tool/schema/result bounds.
 - Integration coverage for real `LlmRuntime.prepareCall()`, parallel sessions, abort cleanup, restart failure, and UTF-8 identifier limits.
+- Public community-plugin badge, DSH discovery metadata, and the pinned npm installation command for the forthcoming release.
 
 ### Security
 

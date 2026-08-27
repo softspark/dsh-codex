@@ -2,12 +2,13 @@
 
 [![CI](https://github.com/softspark/dsh-codex/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/dsh-codex/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![DSH community plugin](https://img.shields.io/badge/DSH-community%20plugin-4b8bbe.svg)](https://github.com/topics/dsh-plugin)
 
 `@softspark/dsh-codex` connects DeepSeek Harness to a locally authenticated Codex app server. Provider ID `codex` is implemented and verified from a local tarball.
 
 The package remains pre-release and unpublished. Install it from source only. The plugin does not implement OAuth, read Codex authentication files, copy tokens, call the OpenAI Responses API directly, or emit telemetry.
 
-This is an official SoftSpark integration. It is not affiliated with or endorsed by OpenAI or DeepSeek.
+This is an independently maintained SoftSpark community integration. It is unofficial and is not affiliated with or endorsed by OpenAI or DeepSeek.
 
 ## Verified status
 
@@ -62,6 +63,16 @@ Use an isolated `DSH_HOME` for evaluation before modifying a regular profile.
 With DSH profiles configured as `autoInstallPeers=false`, a pnpm peer check can report missing `@deepseek-ai/cordis` and `@deepseek-ai/dsh-llm`. The verified DSH host loader supplies those extension seams. Do not install duplicate peer copies unless a future DSH version fails at runtime and its compatibility instructions require them.
 
 The package is not available through `npm install @softspark/dsh-codex`.
+
+## Install a published release
+
+After the first public npm release, install the exact reviewed version into a DSH profile:
+
+```bash
+dsh plugin --profile web add @softspark/dsh-codex@0.2.0 --save-exact
+```
+
+Restart DSH after installation. Do not install an unpinned prerelease in production profiles.
 
 ## Architecture
 
