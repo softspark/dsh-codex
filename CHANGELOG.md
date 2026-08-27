@@ -18,6 +18,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - Stable mode remains the default and rejects DSH tool-result continuation.
 - Dynamic results are text-only, validated atomically, size-bounded, and never executed directly by the adapter.
 
+### Fixed
+
+- CI and publish workflows now write raw SARIF JSON without npm lifecycle output prefixes.
+
 ### Verified
 
 - 131 of 131 tests pass.
