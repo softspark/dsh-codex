@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 ### Fixed
 
 - CI and publish workflows now write raw SARIF JSON without npm lifecycle output prefixes.
+- SARIF artifact upload uses the Node.js 24 based `actions/upload-artifact@v7` runtime.
 
 ### Verified
 
