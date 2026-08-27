@@ -12,7 +12,7 @@ description: "Selects the official Codex app-server stdio protocol for ChatGPT s
 
 ## Status
 
-Accepted, implemented for the 0.1 text and reasoning scope, and verified through a local tarball in an isolated DSH profile. The package remains unpublished.
+Accepted, implemented for the public `1.0.0` scope, and verified through a local tarball in an isolated DSH profile.
 
 ## Context
 

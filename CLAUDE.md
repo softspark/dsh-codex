@@ -8,7 +8,7 @@ output-mode: concise
 
 `@softspark/dsh-codex` is a strict ESM TypeScript provider plugin for DeepSeek Harness. The target provider ID is `codex`. It delegates execution and authentication to the local `codex app-server` process over JSON-RPC on stdio.
 
-Version `0.1.0` is unpublished. Do not describe the adapter as working until the composition, packaging, and real-client smoke tests pass.
+Version `1.0.0` is the first public release. Do not describe a later change as working until composition, packaging, and real-client smoke tests pass.
 
 ## Commands
 

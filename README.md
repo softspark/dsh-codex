@@ -4,9 +4,9 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![DSH community plugin](https://img.shields.io/badge/DSH-community%20plugin-4b8bbe.svg)](https://github.com/topics/dsh-plugin)
 
-`@softspark/dsh-codex` connects DeepSeek Harness to a locally authenticated Codex app server. Provider ID `codex` is implemented and verified from a local tarball.
+`@softspark/dsh-codex` connects DeepSeek Harness to a locally authenticated Codex app server. Provider ID `codex` is implemented and verified for the `1.0.0` public release.
 
-The package remains pre-release and unpublished. Install it from source only. The plugin does not implement OAuth, read Codex authentication files, copy tokens, call the OpenAI Responses API directly, or emit telemetry.
+Version `1.0.0` is the first public release. The plugin does not implement OAuth, read Codex authentication files, copy tokens, call the OpenAI Responses API directly, or emit telemetry.
 
 This is an independently maintained SoftSpark community integration. It is unofficial and is not affiliated with or endorsed by OpenAI or DeepSeek.
 
@@ -23,7 +23,7 @@ The 2026-08-26 verification run produced this evidence:
 - A DSH session survived a host restart with the same Codex thread ID, and a live cancellation ended as `aborted`.
 - The user screenshot showed GPT-5.6-Sol with `xhigh` reasoning.
 
-These results verify the source build and local tarball path. They do not represent an npm release.
+These results verify the source build and release artifact. Registry provenance and installation are verified separately by the post-release SOP.
 
 ## Requirements
 
@@ -62,14 +62,12 @@ Use an isolated `DSH_HOME` for evaluation before modifying a regular profile.
 
 With DSH profiles configured as `autoInstallPeers=false`, a pnpm peer check can report missing `@deepseek-ai/cordis` and `@deepseek-ai/dsh-llm`. The verified DSH host loader supplies those extension seams. Do not install duplicate peer copies unless a future DSH version fails at runtime and its compatibility instructions require them.
 
-The package is not available through `npm install @softspark/dsh-codex`.
-
 ## Install a published release
 
-After the first public npm release, install the exact reviewed version into a DSH profile:
+Install the exact reviewed version into a DSH profile:
 
 ```bash
-dsh plugin --profile web add @softspark/dsh-codex@0.2.0 --save-exact
+dsh plugin --profile web add @softspark/dsh-codex@1.0.0 --save-exact
 ```
 
 Restart DSH after installation. Do not install an unpinned prerelease in production profiles.

@@ -12,13 +12,23 @@ const readJson = async (relativePath) =>
 
 const packageJson = await readJson('package.json');
 const packageLock = await readJson('package-lock.json');
+const clientSource = await readFile(resolve(root, 'src/app-server/client.ts'), 'utf8');
+const clientVersion = clientSource.match(
+  /const DEFAULT_CLIENT_INFO:[\s\S]*?version: '([^']+)'/u,
+)?.[1];
 const versions = new Map([
   ['package.json', packageJson.version],
   ['package-lock.json', packageLock.version],
   ['package-lock.json packages[""]', packageLock.packages?.['']?.version],
+  ['src/app-server/client.ts DEFAULT_CLIENT_INFO', clientVersion],
 ]);
 
 let failed = false;
+const major = Number.parseInt(packageJson.version.split('.')[0] ?? '', 10);
+if (!Number.isInteger(major) || major < 1) {
+  console.error(`SoftSpark public modules must start at 1.0.0 or later, got ${packageJson.version}`);
+  failed = true;
+}
 for (const [source, version] of versions) {
   if (version !== packageJson.version) {
     console.error(`${source} version ${String(version)} does not match ${packageJson.version}`);

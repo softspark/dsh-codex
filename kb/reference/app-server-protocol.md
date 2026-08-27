@@ -41,7 +41,7 @@ The client sends `initialize`, validates the result, then sends `initialized`. I
     "clientInfo": {
       "name": "softspark_dsh_codex",
       "title": "SoftSpark DSH Codex",
-      "version": "0.2.0"
+      "version": "1.0.0"
     },
     "capabilities": {
       "experimentalApi": false,

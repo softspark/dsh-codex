@@ -44,7 +44,7 @@ async function startClient(
       clientInfo: {
         name: 'softspark_dsh_codex',
         title: 'SoftSpark DSH Codex',
-        version: '0.0.0',
+        version: '1.0.0',
       },
       capabilities: { experimentalApi, requestAttestation: false },
     },

@@ -12,7 +12,7 @@ description: "Selects a bounded two-step bridge from Codex app-server dynamic to
 
 ## Status
 
-Accepted and implemented in 0.2.0.
+Accepted and implemented in 1.0.0.
 
 ## Context
 

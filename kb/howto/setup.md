@@ -5,7 +5,7 @@ service: dsh-codex
 tags: [setup, source, codex, dsh, authentication]
 created: "2026-08-26"
 last_updated: "2026-08-26"
-description: "Builds and checks the unpublished dsh-codex package against a local ChatGPT-authenticated Codex CLI."
+description: "Builds and checks dsh-codex against a local ChatGPT-authenticated Codex CLI."
 ---
 
 # Set Up dsh-codex from Source
@@ -19,7 +19,7 @@ description: "Builds and checks the unpublished dsh-codex package against a loca
 - A disposable DSH profile for later composition testing.
 - Git.
 
-The package is not published to npm. The adapter and provider patch are complete for the documented text and reasoning scope. This guide verifies the source and a local package artifact before any public release.
+The adapter and provider patch are complete for the documented scope. This guide verifies the source and a local package artifact independently of the registry release.
 
 ## Steps
 
@@ -96,7 +96,7 @@ Create the tarball only for a disposable DSH profile test:
 
 ```bash
 npm pack --ignore-scripts
-dsh plugin --profile <disposable-profile> add file:./softspark-dsh-codex-0.2.0.tgz --save-exact
+dsh plugin --profile <disposable-profile> add file:./softspark-dsh-codex-1.0.0.tgz --save-exact
 ```
 
 Start that profile with no OpenAI API key in the environment and confirm provider `codex` appears. Do not modify the real Codex credential store.

@@ -12,7 +12,7 @@ description: "Documents the implemented provider schema, environment allowlist, 
 
 ## Publication status
 
-The package is unpublished, but the provider schema is implemented and composition tested for the 0.1 text and reasoning scope.
+The provider schema is implemented and composition tested for the documented text, reasoning, replay, cancellation, and opt-in dynamic-tool scope.
 
 ## Required external state
 

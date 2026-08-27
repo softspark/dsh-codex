@@ -14,7 +14,7 @@ description: "Records verified implementation phases and the remaining publicati
 
 In progress because publication and live subscription-subagent smoke are pending. The stable provider and opt-in 0.2 dynamic-tool bridge are implemented and verified in tests.
 
-The package remains unpublished.
+Version `1.0.0` is the first public release target; registry publication and post-release verification are tracked in Phase 4.
 
 ## Objective
 
@@ -121,7 +121,7 @@ Status: verified complete for text and reasoning.
 Status: verified complete.
 
 - [x] Cordis patch and package entry.
-- [x] 51.8 kB local 0.2.0 tarball with SHA-256 `be881c535081103df618113970cdc354c18c8a5c355156c100101a0d814258d5`.
+- [x] 51.8 kB pre-release tarball with SHA-256 `be881c535081103df618113970cdc354c18c8a5c355156c100101a0d814258d5`.
 - [x] Installation into isolated `DSH_HOME`.
 - [x] DSH host supplied Cordis and LLM peer seams despite `autoInstallPeers=false`.
 - [x] DSH web boot returned HTTP 200.

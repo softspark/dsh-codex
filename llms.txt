@@ -2,7 +2,7 @@
 
 > Pre-release SoftSpark provider adapter that runs a locally authenticated Codex app server inside DeepSeek Harness.
 
-Status: 0.2.0 is implemented locally and remains unpublished.
+Status: 1.0.0 is the first public release.
 
 ## Evidence
 

@@ -12,7 +12,7 @@ description: "Defines the implemented runtime layers, trust boundaries, replay p
 
 ## Purpose
 
-`dsh-codex` is an implemented DSH provider named `codex`. It embeds a locally authenticated Codex agent inside a DSH session without taking ownership of OpenAI credentials. The source and local tarball are verified; npm publication remains pending.
+`dsh-codex` is an implemented DSH provider named `codex`. It embeds a locally authenticated Codex agent inside a DSH session without taking ownership of OpenAI credentials. Version `1.0.0` is the first public release.
 
 ## Component flow
 

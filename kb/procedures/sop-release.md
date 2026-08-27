@@ -4,7 +4,7 @@ category: procedures
 service: dsh-codex
 tags: [sop, release, npm, provenance, signatures]
 created: "2026-08-26"
-last_updated: "2026-08-26"
+last_updated: "2026-08-27"
 description: "Versions, verifies, tags, publishes, and verifies a provenance-signed public npm release."
 ---
 
@@ -16,7 +16,8 @@ Publish a traceable npm package only after DSH composition and Codex compatibili
 
 ## Prerequisites
 
-- The package is approved for publication. The current 0.2.0 work is not yet published.
+- The first public release of every SoftSpark module is `1.0.0`; `0.x` tags and publications are forbidden. Subsequent releases follow Semantic Versioning from the latest published tag.
+- The package is approved for publication.
 - Maintainer access to `softspark/dsh-codex` and `@softspark` on npm.
 - npm trusted publishing or an `NPM_TOKEN` secret configured in GitHub.
 - GitHub Actions OIDC permission `id-token: write`.

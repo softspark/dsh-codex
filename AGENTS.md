@@ -4,7 +4,7 @@
 
 Build `@softspark/dsh-codex` as a provider adapter between DeepSeek Harness and the local Codex app server. The target provider ID is `codex`.
 
-The package is pre-release and unpublished. Do not claim end-to-end functionality without a passing DSH composition test and a real-client smoke test.
+Version `1.0.0` is the first public release. Do not claim end-to-end functionality for any change without a passing DSH composition test and a real-client smoke test.
 
 ## Required workflow
 
@@ -38,6 +38,7 @@ npm run package:check
 - Redact credential-like values from errors, logs, test output, and tool results.
 - Do not add telemetry, analytics, crash reporting, or remote logging.
 - DSH and Cordis extension seams remain peer dependencies.
+- Start every public SoftSpark module at version `1.0.0`; never tag or publish a `0.x` release.
 - Experimental dynamic tools require allowlisted schemas, cancellation, timeouts, and bounded output.
 
 ## TypeScript rules
