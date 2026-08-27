@@ -4,7 +4,7 @@ category: procedures
 service: dsh-codex
 tags: [sop, post-release, npm, provenance, smoke-test]
 created: "2026-08-26"
-last_updated: "2026-08-26"
+last_updated: "2026-08-27"
 description: "Verifies npm provenance, signatures, package contents, Codex authentication, and DSH composition after release."
 ---
 
@@ -81,7 +81,7 @@ Set `DSH_HOME` to a disposable path. Install the released tarball into the teste
 - [ ] Cancellation terminates the active turn.
 - [ ] Malformed protocol and timeout tests remain fail-closed.
 - [ ] DSH and Codex approval or sandbox prompts are not silently bypassed.
-- [ ] No dynamic DSH tools are advertised in the 0.1 release.
+- [ ] Stable mode advertises no DSH tools; dynamic tools appear only when `experimentalDynamicTools: true` is configured.
 
 Do not improvise the DSH install command. Copy it from the release-tested setup document after it exists.
 

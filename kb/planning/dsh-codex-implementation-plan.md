@@ -4,17 +4,15 @@ category: planning
 service: dsh-codex
 tags: [planning, implementation, dsh, codex, release]
 created: "2026-08-26"
-last_updated: "2026-08-26"
-description: "Records verified implementation phases and the remaining publication work for dsh-codex."
+last_updated: "2026-08-27"
+description: "Records the completed implementation, publication, provenance, and post-release verification of dsh-codex 1.0.0."
 ---
 
 # dsh-codex Implementation Plan
 
 ## Status
 
-In progress because publication and live subscription-subagent smoke are pending. The stable provider and opt-in 0.2 dynamic-tool bridge are implemented and verified in tests.
-
-Version `1.0.0` is the first public release target; registry publication and post-release verification are tracked in Phase 4.
+Complete. Version `1.0.0` is published with npm provenance and verified through a clean registry install, live DSH bridge, Claude and Gemini delegation, and cancellation smoke tests.
 
 ## Objective
 
@@ -38,7 +36,6 @@ Run a ChatGPT-authenticated Codex agent as DSH provider `codex` without plugin-o
 
 - Image, audio, and other multimodal conversion.
 - Remote app-server transports.
-- Publication and post-release verification.
 
 Codex built-in tools run internally. Stable mode keeps DSH tools unavailable. Opt-in dynamic mode bridges only schemas and correlated text results; DSH remains the executor.
 
@@ -69,6 +66,9 @@ Codex built-in tools run internally. Stable mode keeps DSH tools unavailable. Op
 | DSH end-to-end prompt | Expected marker returned |
 | DSH restart replay | Same session returned the remembered nonce with the identical Codex thread ID |
 | DSH interruption | Active turn ended with reason `aborted` |
+| npm publication | `@softspark/dsh-codex@1.0.0`, SLSA provenance v1, integrity `sha512-o4ukvk7tYecquqtYWe87KLyRGLzaoSuF8qddei3cLi8sta/OpACPAgoM+uBU6Bw+Tq2zEzV3rTVxOZ3rAdcnBw==` |
+| Registry install | Lifecycle scripts disabled, 10 verified signatures, 2 attestations, 0 vulnerabilities |
+| Published DSH smoke | `DSH_DYNAMIC_BRIDGE_OK`; delegated cancellation ended `aborted` |
 | User verification | Screenshot shows GPT-5.6-Sol with `xhigh` reasoning |
 
 No Context7 or RAG corpus state is required to establish these repository results.
@@ -147,14 +147,14 @@ Status: implemented and locally verified.
 
 ### Phase 5: Publication
 
-Status: pending.
+Status: verified complete.
 
 - [x] Complete final full-repository review.
 - [x] Record DSH 0.1.1-rc.2 and full tarball SHA-256.
-- [ ] Create the approved release commit and `v*` tag.
-- [ ] Publish with npm provenance and `--ignore-scripts`.
-- [ ] Verify registry provenance, signatures, contents, and clean-install smoke.
-- [ ] Deprecate and fix forward if any post-release gate fails.
+- [x] Create the approved release commit and `v1.0.0` tag.
+- [x] Publish with npm provenance and `--ignore-scripts`.
+- [x] Verify registry provenance, signatures, contents, and clean-install smoke.
+- [x] Record post-release evidence in the GitHub Release notes.
 
 ## Success criteria
 
@@ -169,19 +169,19 @@ Status: pending.
 | Credential stores remain outside the plugin | Verified by design and tests |
 | Malformed, oversized, timed-out, and credential-bearing data fails closed | Verified by tests |
 | Real interruption inside DSH | Verified |
-| Public npm provenance and post-release smoke | Pending |
+| Public npm provenance and post-release smoke | Verified |
 
 ## Remaining risks
 
 | Risk | Current control |
 |---|---|
 | App-server protocol churn | Pin Codex 0.149.1 for the release candidate and rerun schema plus live smokes on upgrade. |
-| DSH and Codex permission mismatch | Keep stable sandbox and approval mapping. DSH tools remain unbridged. |
+| DSH and Codex permission mismatch | Keep stable sandbox and approval mapping. Stable mode remains unbridged; dynamic mode is explicit and bounded. |
 | Credential leakage | Retain bounds, recursive redaction, and structural secret audits. |
 | Host peer resolution changes | Do not duplicate peers. Repeat isolated install on every supported DSH version. |
 | Long-running cancellation differs from tests | Repeat the verified live interruption smoke for every supported DSH or Codex upgrade. |
-| Experimental tool pressure | Keep `experimentalApi: false` and require a new ADR before bridging. |
+| Experimental tool pressure | Keep `experimentalApi: false`; retain the opt-in bridge bounds and ADR-002 review requirements. |
 
 ## Next checkpoint
 
-Phase 4 starts only after explicit approval to create the release commit, tag, and public npm publication.
+For later releases, start from the published `1.0.0` baseline, follow Semantic Versioning, and repeat the complete release plus post-release SOPs.
