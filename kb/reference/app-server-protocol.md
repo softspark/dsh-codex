@@ -87,7 +87,7 @@ Server requests are fail closed. If sending a handler result fails, the client a
 
 A persistent DSH request can resume a Codex thread from assistant replay state owned by provider `codex`. The adapter accepts either the DSH envelope form under `response` or the direct response object. Both require version 1 plus non-empty `threadId` and `turnId`.
 
-The adapter advances a bounded cursor through the last user message before the replay-bearing assistant and sends only newer input. The newest same-provider assistant is authoritative: invalid replay starts a new thread and never falls back to an older state. Another provider's state and ephemeral requests do not resume.
+The adapter advances a bounded cursor through the last user message before the replay-bearing assistant and sends only newer input. If request-history compaction has removed that cursor, the adapter treats the retained messages as the available newer suffix and continues the existing thread. The newest same-provider assistant is authoritative: invalid replay starts a new thread and never falls back to an older state. Another provider's state and ephemeral requests do not resume.
 
 ## Dynamic tools
 
