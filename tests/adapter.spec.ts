@@ -346,6 +346,38 @@ describe('CodexAdapter', () => {
     )
   })
 
+  it('resumes from the newest assistant when compaction leaves an already-answered message behind', async () => {
+    const fake = createFakeClient()
+    const adapter = createAdapter(fake)
+
+    completeNextTurn(fake, { turnId: 'turn-1' })
+    await collect(adapter.stream(generateOptions([userMessage('m1', 'first')])))
+
+    completeNextTurn(fake, { turnId: 'turn-2' })
+    await collect(adapter.stream(generateOptions([
+      userMessage('m1', 'first'),
+      userMessage('m2', 'second'),
+    ])))
+
+    // Compaction drops the cursor (m2) but leaves m1 behind, and m1 was already
+    // answered -- the assistant reply for it is still in the history. Resuming
+    // from the whole retained history would re-send 'first' to a thread that
+    // has already processed it.
+    completeNextTurn(fake, { turnId: 'turn-3' })
+    await collect(adapter.stream(generateOptions([
+      userMessage('m1', 'first'),
+      assistantMessage('a1', CODEX_PROVIDER, undefined),
+      userMessage('m3', 'third'),
+    ])))
+
+    expect(fake.methods.startThread).toHaveBeenCalledOnce()
+    expect(fake.methods.startTurn).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ input: [{ type: 'text', text: 'third' }] }),
+      expect.any(Object),
+    )
+  })
+
   it('continues a live session after request-history compaction removes its cursor', async () => {
     const fake = createFakeClient()
     const adapter = createAdapter(fake)
