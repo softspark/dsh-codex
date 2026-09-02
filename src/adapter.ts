@@ -1198,10 +1198,7 @@ function messagesAfterCursor(
         message.role === 'user' && String(message.id) === cursor
       ))
   if (cursor !== undefined && cursorIndex < 0) {
-    throw new LlmError(
-      'Codex session input cursor is missing from request history',
-      'SESSION_CURSOR_MISSING',
-    )
+    return [...messages]
   }
   return messages.slice(cursorIndex + 1)
 }

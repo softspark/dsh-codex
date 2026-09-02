@@ -346,6 +346,28 @@ describe('CodexAdapter', () => {
     )
   })
 
+  it('continues a live session after request-history compaction removes its cursor', async () => {
+    const fake = createFakeClient()
+    const adapter = createAdapter(fake)
+    completeNextTurn(fake, { turnId: 'turn-1' })
+
+    await collect(adapter.stream(generateOptions([
+      userMessage('message-1', 'first'),
+    ])))
+    completeNextTurn(fake, { turnId: 'turn-2' })
+
+    await collect(adapter.stream(generateOptions([
+      userMessage('message-2', 'second'),
+    ])))
+
+    expect(fake.methods.startThread).toHaveBeenCalledOnce()
+    expect(fake.methods.startTurn).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ input: [{ type: 'text', text: 'second' }] }),
+      expect.any(Object),
+    )
+  })
+
   it('resumes a replayed thread and sends only user messages newer than the replay', async () => {
     const fake = createFakeClient()
     completeNextTurn(fake, { threadId: 'thread-replayed' })
