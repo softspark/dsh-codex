@@ -1,6 +1,6 @@
 {
   "name": "@softspark/dsh-codex",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "DeepSeek Harness provider plugin that delegates ChatGPT subscription access and agent execution to the locally authenticated Codex app server.",
   "keywords": [
     "deepseek-harness",
@@ -85,18 +85,18 @@
     "@deepseek-ai/schemastery": "3.18.2"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/cordis": "4.0.2",
     "@deepseek-ai/dsh-attachment": "0.1.1-rc.2",
     "@deepseek-ai/dsh-llm": "0.1.1-rc.2"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.1",
-    "@deepseek-ai/cordis-plugin-include": "1.0.6",
-    "@deepseek-ai/cordis-plugin-loader": "1.0.2",
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/cordis-plugin-include": "1.0.7",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.3",
     "@deepseek-ai/dsh-attachment": "0.1.1-rc.2",
     "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
     "@eslint/js": "10.0.1",
-    "@types/node": "22.20.1",
+    "@types/node": "26.4.0",
     "@vitest/coverage-v8": "4.1.11",
     "eslint": "10.9.1",
     "typescript": "5.9.3",

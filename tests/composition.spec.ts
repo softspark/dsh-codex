@@ -200,7 +200,10 @@ describe('Cordis composition', () => {
     expect(packageJson.name).toBe('@softspark/dsh-codex')
     expect(packageJson.dsh?.bundle?.patch).toBe('./cordis.patch.yml')
     expect(packageJson.peerDependencies).toMatchObject({
-      '@deepseek-ai/cordis': '4.0.1',
+      // A literal on purpose, unlike clientInfo.version: this is the published
+      // peer contract, so moving it must be a deliberate edit here too. 4.0.2
+      // is what @deepseek-ai/dsh 0.1.1-rc.2 actually ships.
+      '@deepseek-ai/cordis': '4.0.2',
       '@deepseek-ai/dsh-llm': '0.1.1-rc.2',
     })
     expect(patch).toContain("name: '@softspark/dsh-codex'")

@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-02
+
+### Changed
+
+- The `@deepseek-ai/cordis` peer moves from `4.0.1` to `4.0.2`. This corrects a
+  mismatch rather than following a release: `@deepseek-ai/dsh` 0.1.1-rc.2 ships
+  cordis 4.0.2, so the exact `4.0.1` peer was already wrong against the runtime
+  this plugin is composed into.
+- Development dependencies: `@deepseek-ai/cordis-plugin-include` 1.0.7,
+  `@deepseek-ai/cordis-plugin-loader` 1.0.3, `@types/node` 26.4.0. The two
+  cordis plugins require `cordis ^4.0.2`, which is what surfaced the peer drift.
+
+`typescript` stays at 5.9.3. Dependabot grouped a bump to 7.0.2 with the rest,
+which `typescript-eslint@8.68.0` does not accept — the tree does not resolve.
+That upgrade waits for a typescript-eslint release that supports it.
+
 ## [1.1.1] - 2026-09-02
 
 ### Changed
