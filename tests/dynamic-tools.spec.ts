@@ -330,6 +330,34 @@ describe('experimental dynamic-tool bridge', () => {
     expect(fake.methods.startTurn).toHaveBeenCalledOnce()
   })
 
+  it('keeps a lost cursor fatal inside a pending tool turn', async () => {
+    const fake = createFakeClient()
+    const adapter = createAdapter(fake, true)
+    const initialUser = userMessage('user-initial', 'implement the task')
+    const firstStream = collect(adapter.stream(options([initialUser])))
+    await vi.waitFor(() => expect(fake.methods.startTurn).toHaveBeenCalledOnce())
+
+    const response = fake.requestDynamicTool(
+      'call-claude',
+      TOOL.name,
+      { task: 'implement' },
+    )
+    await firstStream
+
+    // A pending tool turn is only meaningful relative to a known cursor. The
+    // session path may resume from a compacted history, but here the state
+    // cannot be reconstructed, so this stays an error rather than becoming a
+    // silent continuation with the wrong input.
+    await expect(collect(adapter.stream(options([
+      assistantToolCallMessage('call-claude'),
+      toolResultMessage('tool-result-claude', 'call-claude', 'implemented'),
+    ])))).rejects.toThrow(/cursor is missing/)
+
+    // The pending call is failed rather than left hanging, so the server side
+    // is not waiting on a turn that will never continue.
+    await expect(response).rejects.toThrow(/cursor is missing/)
+  })
+
   it('maps an errored DSH tool result to an unsuccessful app-server response', async () => {
     const fake = createFakeClient()
     const adapter = createAdapter(fake, true)

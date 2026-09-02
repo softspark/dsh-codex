@@ -1184,13 +1184,24 @@ function selectUserMessages(
   messages: readonly Message[],
   state: Pick<SessionState, 'lastSeenUserMessageId'> | undefined,
 ): Message[] {
-  return messagesAfterCursor(messages, state?.lastSeenUserMessageId)
+  return messagesAfterCursor(messages, state?.lastSeenUserMessageId, 'resume')
     .filter((message) => message.role === 'user' && message.source.kind !== 'tool')
 }
+
+/**
+ * Where to resume when the cursor is absent from request history.
+ *
+ * `resume` belongs to the session path, where a compacted history legitimately
+ * loses the cursor and the turn should continue. `strict` belongs to a pending
+ * dynamic tool turn: that state is only meaningful relative to a known cursor,
+ * so losing it is not recoverable and must stay an error.
+ */
+type MissingCursorPolicy = 'strict' | 'resume'
 
 function messagesAfterCursor(
   messages: readonly Message[],
   cursor: string | undefined,
+  onMissingCursor: MissingCursorPolicy = 'strict',
 ): Message[] {
   const cursorIndex = cursor === undefined
     ? -1
@@ -1198,7 +1209,29 @@ function messagesAfterCursor(
         message.role === 'user' && String(message.id) === cursor
       ))
   if (cursor !== undefined && cursorIndex < 0) {
-    return [...messages]
+    if (onMissingCursor === 'strict') {
+      throw new LlmError(
+        'Codex session input cursor is missing from request history',
+        'SESSION_CURSOR_MISSING',
+      )
+    }
+    // Request-history compaction can drop the cursor while the thread is alive.
+    // Resuming from the newest assistant message is the safe boundary: whatever
+    // precedes it has already been answered, so the thread has consumed it.
+    // This is the same authority the replay path trusts. Sending the whole
+    // retained history instead would re-send any user message left behind that
+    // the thread had already processed.
+    //
+    // With no assistant message at all, nothing has been answered yet, so every
+    // retained message is genuinely new.
+    let lastAnswered = -1
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index]?.role === 'assistant') {
+        lastAnswered = index
+        break
+      }
+    }
+    return messages.slice(lastAnswered + 1)
   }
   return messages.slice(cursorIndex + 1)
 }
