@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-02
+
+### Changed
+
+- `MAX_DYNAMIC_TOOL_RESULT_BYTES` raised from 1 MiB to 4 MiB. The cap is an
+  aggregate over one result batch, not per result, and up to
+  `MAX_PENDING_DYNAMIC_TOOL_CALLS` parallel calls share it — sixteen concurrent
+  delegations had 64 KiB each. A breach still rejects the whole batch and fails
+  the turn, because the batch is validated atomically; the limit moved rather
+  than the atomicity.
+
+### Fixed
+
+- The app-server client test repeated `clientInfo.version` as a literal, so the
+  1.1.0 bump failed the entire app-server suite. It reads `package.json` now,
+  which `verify:version` already pins `DEFAULT_CLIENT_INFO` to. Tag `v1.1.0`
+  carries that failure; nothing was published to npm from it.
+
 ## [1.1.0] - 2026-09-02
 
 ### Fixed

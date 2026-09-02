@@ -1,6 +1,6 @@
 {
   "name": "@softspark/dsh-codex",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "DeepSeek Harness provider plugin that delegates ChatGPT subscription access and agent execution to the locally authenticated Codex app server.",
   "keywords": [
     "deepseek-harness",

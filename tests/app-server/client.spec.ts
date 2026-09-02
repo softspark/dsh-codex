@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module'
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -13,6 +15,14 @@ import {
   modelListResult,
 } from '../fixtures/app-server-messages.js'
 import { FakeTransport } from '../helpers/fake-transport.js'
+
+// Read rather than repeated: a literal here drifts at the next release and
+// fails the whole app-server suite for a version bump. verify:version already
+// pins DEFAULT_CLIENT_INFO to this same field, so the wire payload is checked
+// against the package version instead of a copy of it.
+const PACKAGE_VERSION = (createRequire(import.meta.url)('../../package.json') as {
+  readonly version: string
+}).version
 
 class FailingReplyTransport extends FakeTransport {
   failReplies = false
@@ -44,7 +54,7 @@ async function startClient(
       clientInfo: {
         name: 'softspark_dsh_codex',
         title: 'SoftSpark DSH Codex',
-        version: '1.0.0',
+        version: PACKAGE_VERSION,
       },
       capabilities: { experimentalApi, requestAttestation: false },
     },

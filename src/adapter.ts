@@ -57,7 +57,16 @@ export const MAX_DYNAMIC_TOOL_SCHEMA_BYTES = 65_536
 export const MAX_DYNAMIC_TOOL_CATALOG_BYTES = 524_288
 export const MAX_DYNAMIC_TOOL_ARGUMENT_BYTES = 262_144
 export const MAX_DYNAMIC_TOOL_CALL_ID_BYTES = 256
-export const MAX_DYNAMIC_TOOL_RESULT_BYTES = 1_048_576
+/**
+ * Aggregate cap over one result batch, not per result: up to
+ * {@link MAX_PENDING_DYNAMIC_TOOL_CALLS} parallel calls share it, so at the
+ * previous 1 MiB sixteen concurrent delegations had 64 KiB each. A breach fails
+ * the whole turn — the batch is validated atomically and one oversized member
+ * rejects all of it — which made a routine large delegation report or document
+ * read disproportionately expensive. Raised to 4 MiB; still bounded, because
+ * every byte here lands in the model's context.
+ */
+export const MAX_DYNAMIC_TOOL_RESULT_BYTES = 4_194_304
 export const MAX_PENDING_DYNAMIC_TOOL_CALLS = 16
 export const MAX_DYNAMIC_TOOL_CALLS_PER_TURN = 128
 
