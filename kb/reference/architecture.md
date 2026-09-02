@@ -2,9 +2,9 @@
 title: "dsh-codex Architecture"
 category: reference
 service: dsh-codex
-tags: [architecture, dsh, codex, json-rpc, stdio]
+tags: [architecture, dsh, codex, json-rpc, stdio, images, recovery]
 created: "2026-08-26"
-last_updated: "2026-08-26"
+last_updated: "2026-09-02"
 description: "Defines the implemented runtime layers, trust boundaries, replay path, and verified DSH composition."
 ---
 
@@ -70,6 +70,33 @@ These values are implementation controls, not a stable public configuration cont
 Codex is the full agent inside DSH. The adapter forwards text and emits text, reasoning, usage, replay, and finish state. Codex retains its own built-in tools, sandbox, and approvals. Stable mode does not inject DSH tools; opt-in dynamic mode registers a bounded catalog and routes calls back through the standard DSH agent loop.
 
 Stable persistent sessions resume from a valid newest same-provider version 1 replay envelope or direct replay object after plugin restart. A bounded last-user cursor skips historical input. Dynamic-tool threads are deliberately non-replayable after restart because their registered catalog and server requests are process-local; continuation fails closed and requires a new DSH session.
+
+## Turn loss and recovery
+
+A turn can be lost while dynamic tool calls are outstanding: a timeout, an
+interrupt, or an adapter restart. The pending turn is detached and its calls
+are failed, and the results the client had already dispatched arrive with
+nothing to answer.
+
+Those stale results stay in the transcript for the life of the session, so
+treating them as fatal made a single lost turn end the conversation. The guard
+now fires only when the request carries no new user message — a genuine attempt
+to answer a dead call. Otherwise the stale results are dropped and the thread is
+resumed with its catalog.
+
+`thread/resume` accepts `dynamicTools`; this was verified against the app-server
+by starting a thread with a catalog, running one turn so a rollout exists, and
+resuming it with the same catalog. Resuming a thread with no turn fails on the
+missing rollout, which is unrelated to the catalog.
+
+## Image input
+
+Model modalities come from `model/list` rather than a fixed text-only claim.
+User image blocks are resolved through the `ctx.attachments` service, which owns
+the bytes and returns a request-encoded version for a stated pixel and byte
+budget; the adapter base64-encodes that into a data URL and sends it on the
+app-server's `image` user-input variant. The adapter never reads a filesystem
+path carried in a message.
 
 ## Stable API policy
 

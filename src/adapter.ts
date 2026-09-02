@@ -11,11 +11,18 @@ import {
   type LlmProviderInfo,
   type LlmResolvedModelInfo,
   type Message,
+  type ModelModality,
   type ResolvedRetryPolicy,
   type StreamChunk,
   type TokenUsage,
   type ToolSchema,
 } from '@deepseek-ai/dsh-llm'
+
+import type {
+  AttachmentStore,
+  ImageAttachmentRef,
+  ImageRequestPolicy,
+} from '@deepseek-ai/dsh-attachment'
 
 import type { AppServerClient } from './app-server/client.js'
 import { safeErrorMessage } from './app-server/redaction.js'
@@ -31,6 +38,7 @@ import type {
   ExperimentalDynamicToolSpec,
   JsonObject,
   JsonValue,
+  CodexUserInput,
 } from './app-server/types.js'
 import {
   isJsonValue,
@@ -81,6 +89,12 @@ export interface CodexAdapterOptions {
   readonly experimentalDynamicTools?: boolean
   readonly requestTimeoutMs: number
   readonly turnTimeoutMs: number
+  /**
+   * Resolved lazily, because `ctx.attachments` is a cordis service that need
+   * not exist when this plugin is applied. Absent means no image can be read,
+   * which is reported per request rather than at construction.
+   */
+  readonly attachments?: () => AttachmentStore | undefined
 }
 
 interface ToolCatalog {
@@ -155,6 +169,7 @@ export class CodexAdapter extends LlmAdapter {
   private readonly approvalPolicy: CodexApprovalPolicy
   private readonly allowApiKeyAuth: boolean
   private readonly experimentalDynamicTools: boolean
+  private readonly attachments: (() => AttachmentStore | undefined) | undefined
   private readonly requestTimeoutMs: number
   private readonly turnTimeoutMs: number
   private readonly sessions = new Map<string, SessionState>()
@@ -181,6 +196,7 @@ export class CodexAdapter extends LlmAdapter {
     this.experimentalDynamicTools = options.experimentalDynamicTools ?? false
     this.requestTimeoutMs = positiveInteger(options.requestTimeoutMs, 'requestTimeoutMs')
     this.turnTimeoutMs = positiveInteger(options.turnTimeoutMs, 'turnTimeoutMs')
+    this.attachments = options.attachments
     if (this.experimentalDynamicTools) {
       this.unregisterServerRequestHandler = this.client.registerServerRequestHandler(
         (request, signal) => this.handleServerRequest(request, signal),
@@ -314,12 +330,6 @@ export class CodexAdapter extends LlmAdapter {
       return
     }
     await this.assertAccount(options.signal)
-    if (containsAnyToolResult(options.messages)) {
-      throw new LlmError(
-        'Dynamic tool result has no live pending app-server request; restart recovery fails closed',
-        'DYNAMIC_TOOL_STATE_LOST',
-      )
-    }
 
     const toolCatalog = this.experimentalDynamicTools
       ? buildToolCatalog(options.tools ?? [])
@@ -327,18 +337,23 @@ export class CodexAdapter extends LlmAdapter {
     const replay = current === undefined && !ephemeral
       ? findReplayCandidate(options.messages, this.provider)
       : undefined
-    if (replay !== undefined && toolCatalog !== undefined && toolCatalog.specs.length > 0) {
+    const messages = selectUserMessages(options.messages, current ?? replay)
+
+    // Tool results in the history are only fatal when there is nothing else to
+    // do with the request. A turn that was aborted — a timeout, an interrupt, a
+    // restarted adapter — leaves its tool results in the transcript forever, and
+    // refusing every later request because of them made one lost turn cost the
+    // whole session: the next message carried the same stale results and landed
+    // right back here. When the user has said something new, the dead calls are
+    // simply dropped and a fresh turn starts on the same thread.
+    if (messages.length === 0 && containsAnyToolResult(options.messages)) {
       throw new LlmError(
-        'Dynamic-tool Codex threads cannot be resumed after adapter restart',
-        'DYNAMIC_TOOL_REPLAY_UNSUPPORTED',
+        'Dynamic tool result has no live pending app-server request; restart recovery fails closed',
+        'DYNAMIC_TOOL_STATE_LOST',
       )
     }
-    const messages = selectUserMessages(options.messages, current ?? replay)
-    const text = messages
-      .map((message) => textOfUserMessage(message))
-      .filter((value) => value.length > 0)
-      .join('\n\n')
-    if (text.length === 0) {
+    const input = await this.buildUserInput(messages, options.signal)
+    if (input.length === 0) {
       throw new LlmError('Codex request has no new text input', 'EMPTY_INPUT')
     }
 
@@ -357,7 +372,7 @@ export class CodexAdapter extends LlmAdapter {
       const started = await this.client.startTurn(
         {
           threadId: state.threadId,
-          input: [{ type: 'text', text }],
+          input,
           model: options.model,
           ...(options.reasoningEffort === undefined
             ? {}
@@ -776,6 +791,10 @@ export class CodexAdapter extends LlmAdapter {
     if (replay === undefined || ephemeral) {
       return this.startSession(options, ephemeral, toolCatalog)
     }
+    // `thread/resume` accepts `dynamicTools`, verified against the app-server:
+    // start a thread with a catalog, run a turn so a rollout exists, and resume
+    // it with the same catalog. Refusing outright cost the session every time a
+    // dynamic-tool turn was lost, for a limit the protocol does not impose.
     const thread = await this.client.resumeThread(
       {
         threadId: replay.threadId,
@@ -783,6 +802,10 @@ export class CodexAdapter extends LlmAdapter {
         cwd: this.cwd,
         sandbox: this.sandbox,
         approvalPolicy: this.approvalPolicy,
+        developerInstructions: toolCatalog === undefined
+          ? STABLE_BRIDGE_INSTRUCTIONS
+          : DYNAMIC_BRIDGE_INSTRUCTIONS,
+        ...(toolCatalog === undefined ? {} : { dynamicTools: toolCatalog.specs }),
       },
       {
         timeoutMs: this.requestTimeoutMs,
@@ -791,6 +814,7 @@ export class CodexAdapter extends LlmAdapter {
     )
     return {
       threadId: thread.id,
+      ...(toolCatalog === undefined ? {} : { toolCatalog }),
       ...(replay.lastSeenUserMessageId === undefined
         ? {}
         : { lastSeenUserMessageId: replay.lastSeenUserMessageId }),
@@ -840,13 +864,64 @@ export class CodexAdapter extends LlmAdapter {
     )
   }
 
+  /**
+   * Turn the new user messages into app-server input.
+   *
+   * Images used to be rejected outright — `textOfUserMessage` threw
+   * UNSUPPORTED_CONTENT on any non-text block — while the adapter separately
+   * told DSH the model was text-only, so an attachment was refused before it
+   * ever reached Codex. The app-server's user input has always had an `image`
+   * variant carrying a URL, and the bytes are read through the attachment
+   * store rather than from any path the message might name.
+   */
+  private async buildUserInput(
+    messages: readonly Message[],
+    signal: AbortSignal | undefined,
+  ): Promise<CodexUserInput[]> {
+    const input: CodexUserInput[] = []
+    const texts: string[] = []
+    let store: AttachmentStore | undefined
+    for (const message of messages) {
+      for (const block of message.content) {
+        if (block.type === 'text') {
+          if (block.text.length > 0) texts.push(block.text)
+          continue
+        }
+        if (block.type === 'image') {
+          store ??= this.attachments?.()
+          if (store === undefined) {
+            throw new LlmError(
+              'Codex cannot read image attachments without an attachment store',
+              'UNSUPPORTED_CONTENT',
+            )
+          }
+          input.push({ type: 'image', url: await imageDataUrl(store, block.attachment, signal) })
+          continue
+        }
+        if (block.type === 'tool-result') {
+          throw new LlmError(
+            'DSH tool-result continuation is not supported by the stable Codex app-server bridge',
+            'UNSUPPORTED_TOOL_CONTINUATION',
+          )
+        }
+        throw new LlmError(
+          `Stable dsh-codex cannot send user content block "${block.type}"`,
+          'UNSUPPORTED_CONTENT',
+        )
+      }
+    }
+    const text = texts.join('\n\n')
+    if (text.length > 0) input.unshift({ type: 'text', text })
+    return input
+  }
+
   private modelInfo(model: CodexModel): LlmModelInfo {
     return {
       provider: this.provider,
       id: model.model,
       name: model.displayName,
       ...(model.description.length === 0 ? {} : { description: model.description }),
-      inputModalities: ['text'],
+      inputModalities: inputModalities(model),
     }
   }
 
@@ -1272,26 +1347,38 @@ function replayThreadId(value: unknown): string | undefined {
   return candidate['threadId']
 }
 
-function textOfUserMessage(message: Message): string {
-  const parts: string[] = []
-  for (const block of message.content) {
-    if (block.type === 'text') {
-      parts.push(block.text)
-      continue
-    }
-    if (block.type === 'tool-result') {
-      throw new LlmError(
-        'DSH tool-result continuation is not supported by the stable Codex app-server bridge',
-        'UNSUPPORTED_TOOL_CONTINUATION',
-      )
-    }
-    throw new LlmError(
-      `Stable dsh-codex cannot send user content block "${block.type}"`,
-      'UNSUPPORTED_CONTENT',
-    )
-  }
-  return parts.join('')
+/**
+ * Codex route budget for one request image. The app-server forwards these bytes
+ * inline as a data URL, so the cap is about what a single request should carry
+ * rather than about what the model can decode.
+ */
+const IMAGE_REQUEST_POLICY: ImageRequestPolicy = {
+  maxPixels: 2_000_000,
+  maxBytes: 5 * 1024 * 1024,
 }
+
+async function imageDataUrl(
+  store: AttachmentStore,
+  ref: ImageAttachmentRef,
+  signal: AbortSignal | undefined,
+): Promise<string> {
+  const version = await store.readImageRequest(ref, IMAGE_REQUEST_POLICY, signal)
+  const base64 = Buffer.from(
+    version.data.buffer,
+    version.data.byteOffset,
+    version.data.byteLength,
+  ).toString('base64')
+  return `data:${version.mediaType};base64,${base64}`
+}
+
+function inputModalities(model: CodexModel): readonly ModelModality[] {
+  const declared = model.inputModalities
+    .filter((modality): modality is ModelModality => (
+      modality === 'text' || modality === 'image'
+    ))
+  return declared.includes('text') ? declared : ['text', ...declared]
+}
+
 
 function assertNoToolResults(messages: readonly Message[]): void {
   if (containsAnyToolResult(messages)) {

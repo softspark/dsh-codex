@@ -14,6 +14,7 @@ import type {
   JsonObject,
   JsonRpcId,
   JsonValue,
+  ExperimentalResumeThreadOptions,
   ResumeThreadOptions,
   ServerRequestHandler,
   StartThreadOptions,
@@ -67,7 +68,7 @@ const MAX_MODEL_PAGES = 100
 const DEFAULT_CLIENT_INFO: AppServerClientInfo = {
   name: 'softspark_dsh_codex',
   title: 'SoftSpark DSH Codex',
-  version: '1.0.0',
+  version: '1.1.0',
 }
 
 export class AppServerRpcError extends Error {
@@ -210,7 +211,7 @@ export class AppServerClient {
   }
 
   async resumeThread(
-    options: ResumeThreadOptions,
+    options: ResumeThreadOptions | ExperimentalResumeThreadOptions,
     requestOptions: AppServerRequestOptions = {},
   ): Promise<CodexThread> {
     const params: Record<string, JsonValue> = {
@@ -473,7 +474,11 @@ export class AppServerClient {
 }
 
 function threadParams(
-  options: StartThreadOptions | ExperimentalStartThreadOptions,
+  options:
+    | StartThreadOptions
+    | ExperimentalStartThreadOptions
+    | ResumeThreadOptions
+    | ExperimentalResumeThreadOptions,
 ): JsonObject {
   const params: Record<string, JsonValue> = {}
   if (options.model !== undefined) params['model'] = options.model

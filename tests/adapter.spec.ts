@@ -7,6 +7,8 @@ import {
 } from '@deepseek-ai/dsh-llm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
+
 import {
   CODEX_PROVIDER,
   MAX_SESSION_STATES,
@@ -74,7 +76,11 @@ function createFakeClient() {
 
 type FakeClient = ReturnType<typeof createFakeClient>
 
-function createAdapter(fake: FakeClient, allowApiKeyAuth = false): CodexAdapter {
+function createAdapter(
+  fake: FakeClient,
+  allowApiKeyAuth = false,
+  attachments?: AttachmentStore,
+): CodexAdapter {
   return new CodexAdapter({
     client: fake.client,
     cwd: '/workspace',
@@ -83,7 +89,42 @@ function createAdapter(fake: FakeClient, allowApiKeyAuth = false): CodexAdapter 
     allowApiKeyAuth,
     requestTimeoutMs: 100,
     turnTimeoutMs: 1_000,
+    ...(attachments === undefined ? {} : { attachments: () => attachments }),
   })
+}
+
+const IMAGE_BYTES = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10])
+
+function imageStore(): {
+  readonly store: AttachmentStore
+  readonly readImageRequest: ReturnType<typeof vi.fn>
+} {
+  const readImageRequest = vi.fn(async () => ({
+    data: IMAGE_BYTES,
+    mediaType: 'image/png',
+  }))
+  return { store: { readImageRequest } as unknown as AttachmentStore, readImageRequest }
+}
+
+function imageMessage(id: string, text: string): Message {
+  return {
+    id: MessageId(id),
+    role: 'user',
+    content: [
+      { type: 'text', text },
+      {
+        type: 'image',
+        attachment: {
+          attachmentId: 'attachment-1',
+          mediaType: 'image/png',
+          bytes: IMAGE_BYTES.byteLength,
+          width: 2,
+          height: 2,
+        },
+      } as Message['content'][number],
+    ],
+    source: { kind: 'user' },
+  }
 }
 
 function userMessage(id: string, text: string): Message {
@@ -237,7 +278,7 @@ describe('CodexAdapter', () => {
     await expect(createAdapter(allowed, true).listModels(CODEX_PROVIDER)).resolves.toHaveLength(1)
   })
 
-  it('lists visible text models and resolves reasoning efforts', async () => {
+  it('lists visible models with their declared modalities and reasoning efforts', async () => {
     const fake = createFakeClient()
     fake.methods.listModels.mockResolvedValue([MODEL, { ...MODEL, id: 'hidden', hidden: true }])
     const adapter = createAdapter(fake)
@@ -247,7 +288,7 @@ describe('CodexAdapter', () => {
       id: 'gpt-test',
       name: 'GPT Test',
       description: 'Test model',
-      inputModalities: ['text'],
+      inputModalities: ['text', 'image'],
     }])
     await expect(adapter.resolveModel(CODEX_PROVIDER, 'model-id')).resolves.toMatchObject({
       id: 'gpt-test',
@@ -308,6 +349,36 @@ describe('CodexAdapter', () => {
       expect.objectContaining({ effort: 'high' }),
       expect.any(Object),
     )
+  })
+
+  it('sends an attached image alongside its text', async () => {
+    const fake = createFakeClient()
+    const { store, readImageRequest } = imageStore()
+    const adapter = createAdapter(fake, false, store)
+    completeNextTurn(fake)
+
+    await collect(adapter.stream(generateOptions([imageMessage('message-1', 'what is this?')])))
+
+    expect(readImageRequest).toHaveBeenCalled()
+    expect(fake.methods.startTurn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: [
+          { type: 'text', text: 'what is this?' },
+          { type: 'image', url: `data:image/png;base64,${Buffer.from(IMAGE_BYTES).toString('base64')}` },
+        ],
+      }),
+      expect.any(Object),
+    )
+  })
+
+  it('reports an attached image it has no store to read', async () => {
+    const fake = createFakeClient()
+    const adapter = createAdapter(fake)
+
+    await expect(collect(adapter.stream(generateOptions([
+      imageMessage('message-1', 'what is this?'),
+    ])))).rejects.toMatchObject({ failure: { code: 'UNSUPPORTED_CONTENT' } })
+    expect(fake.methods.startTurn).not.toHaveBeenCalled()
   })
 
   it.each([

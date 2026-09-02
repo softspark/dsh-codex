@@ -2,10 +2,10 @@
 title: "dsh-codex Common Issues"
 category: troubleshooting
 service: dsh-codex
-tags: [troubleshooting, node, codex, authentication, dsh]
+tags: [troubleshooting, node, codex, authentication, dsh, timeouts, images]
 created: "2026-08-26"
-last_updated: "2026-08-26"
-description: "Diagnoses local Node, Codex authentication, app-server protocol, timeout, sandbox, and DSH selector failures."
+last_updated: "2026-09-02"
+description: "Diagnoses local Node, Codex authentication, app-server protocol, timeout, lost-turn recovery, image input, sandbox, and DSH selector failures."
 ---
 
 # dsh-codex Common Issues
@@ -98,6 +98,40 @@ Compare the generated schema with the pinned release fixture. Update validation,
 **Resolution:** Stop the turn. Use a stable, tested Codex sandbox and approval policy. Do not enable experimental tool bridging to bypass the mismatch.
 
 **Prevention:** Maintain an explicit mapping and composition tests for every supported policy.
+
+## A turn fails and the session will not continue
+
+```text
+This turn failed  Codex turn timed out                      CODEX_TURN_TIMEOUT
+This turn failed  Dynamic tool result has no live pending
+                  app-server request; restart recovery
+                  fails closed                              DYNAMIC_TOOL_STATE_LOST
+```
+
+One fault, two messages. `turnSignal` aborts the turn at `turnTimeoutMs`,
+`detachPendingTurn` drops the pending turn, and the UI then posts the tool
+results that were in flight into a session that no longer has a live turn.
+
+Before 1.1.0 the second failure was terminal: the transcript keeps those tool
+results, so every later message re-entered the same branch and the session was
+finished. Since 1.1.0 the guard fires only when the request carries nothing
+else to act on. Say something new and the dead calls are dropped, the thread is
+resumed, and a fresh turn starts. The failed turn is still lost.
+
+Raise `turnTimeoutMs` if turns legitimately run long; the ceiling is 3600000.
+That helps a turn that is slow, not one that is stuck — use the interrupt for
+those rather than waiting out a longer abort.
+
+## An attached image is refused
+
+Before 1.1.0 the adapter reported every model as text-only regardless of what
+the app-server said, and rejected every non-text content block, so an image was
+refused before it could be sent. Both are fixed: modalities come from
+`model/list`, and image bytes are read through `ctx.attachments` and sent as a
+data URL on the app-server's `image` input variant.
+
+An image still needs an attachment store. Without one the request fails with
+`UNSUPPORTED_CONTENT` naming the missing store rather than blaming the content.
 
 ## Codex models do not appear in the DSH selector
 

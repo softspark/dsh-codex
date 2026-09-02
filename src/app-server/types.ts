@@ -158,6 +158,10 @@ export interface ResumeThreadOptions extends StartThreadOptions {
   readonly threadId: string
 }
 
+export interface ExperimentalResumeThreadOptions extends ResumeThreadOptions {
+  readonly dynamicTools: readonly ExperimentalDynamicToolSpec[]
+}
+
 export interface StartTurnOptions {
   readonly threadId: string
   readonly input: readonly CodexUserInput[]

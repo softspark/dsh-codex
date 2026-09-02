@@ -199,6 +199,9 @@ export function apply(ctx: Context, config: Config = {}): void {
     approvalPolicy: resolved.approvalPolicy,
     allowApiKeyAuth: resolved.allowApiKeyAuth,
     experimentalDynamicTools: resolved.experimentalDynamicTools,
+    // Resolved per request rather than captured here: `ctx.attachments` is a
+    // cordis service that may be installed after this plugin is applied.
+    attachments: () => ctx.attachments,
     requestTimeoutMs: resolved.requestTimeoutMs,
     turnTimeoutMs: resolved.turnTimeoutMs,
   }

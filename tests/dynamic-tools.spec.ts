@@ -966,6 +966,58 @@ describe('experimental dynamic-tool bridge', () => {
     await freshAdapter.close()
   })
 
+  it('resumes the thread when new user input follows a lost dynamic turn', async () => {
+    const original = createFakeClient()
+    const originalAdapter = createAdapter(original, true)
+    const { initialUser, response } = await beginDynamicCall(original, originalAdapter)
+    const responseFailure = response.catch((error: unknown) => error)
+    await originalAdapter.close()
+    await responseFailure
+    const replayedAssistant: Message = {
+      ...assistantToolCallMessage('call-claude'),
+      source: {
+        kind: 'model',
+        provider: CODEX_PROVIDER,
+        model: MODEL.model,
+        replayState: {
+          response: {
+            version: 1,
+            threadId: 'thread-tools',
+            turnId: 'turn-tools',
+            pendingDynamicTools: true,
+          },
+        },
+      },
+    }
+    const fresh = createFakeClient()
+    const freshAdapter = createAdapter(fresh, true)
+
+    const streamed = collect(freshAdapter.stream(options([
+      initialUser,
+      replayedAssistant,
+      toolResultMessage('replayed-result', 'call-claude', 'stale, must be dropped'),
+      userMessage('user-after-loss', 'carry on without that tool call'),
+    ])))
+    await vi.waitFor(() => expect(fresh.methods.startTurn).toHaveBeenCalled())
+    emitCompletedTurn(fresh, 'continued')
+    await streamed
+
+    expect(fresh.methods.resumeThread).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: 'thread-tools',
+        dynamicTools: expect.any(Array),
+      }),
+      expect.anything(),
+    )
+    expect(fresh.methods.startTurn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: [{ type: 'text', text: 'carry on without that tool call' }],
+      }),
+      expect.anything(),
+    )
+    await freshAdapter.close()
+  })
+
   it.each([
     [
       'duplicate',

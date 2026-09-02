@@ -4,6 +4,31 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-02
+
+### Fixed
+
+- A lost dynamic-tool turn no longer costs the whole session. An aborted turn — a
+  timeout, an interrupt, a restarted adapter — leaves its tool results in the
+  transcript permanently, and every later request was refused because of them,
+  so one overrun turn ended the conversation for good. Tool results are now
+  fatal only when the request carries nothing else to act on; when the user has
+  said something new, the dead calls are dropped and a fresh turn starts.
+- Dynamic-tool threads are resumed instead of refused. `thread/resume` accepts
+  `dynamicTools` — verified against the app-server — so the blanket
+  `DYNAMIC_TOOL_REPLAY_UNSUPPORTED` refusal enforced a limit the protocol does
+  not impose.
+
+### Added
+
+- Image input. The app-server's user input has always carried an `image`
+  variant, but every non-text content block was rejected before it could be
+  sent, and the adapter separately reported every model as text-only. Model
+  modalities are now taken from what the app-server reports, and image bytes are
+  read through `ctx.attachments` — never from a path a message names — and sent
+  as a data URL.
+- `@deepseek-ai/dsh-attachment` as a peer dependency.
+
 ## [1.0.0] - 2026-08-27
 
 ### Added
