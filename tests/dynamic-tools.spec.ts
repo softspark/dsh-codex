@@ -187,6 +187,21 @@ function assistantToolCallMessage(callId: string): Message {
   }
 }
 
+function pluginNoticeMessage(id: string, text: string): Message {
+  // What DSH injects when a background subagent finishes: the user role, but
+  // produced by a plugin rather than typed by anyone.
+  return {
+    id: MessageId(id),
+    role: 'user',
+    content: [{ type: 'text', text }],
+    source: {
+      kind: 'plugin',
+      plugin: 'tool-jobs',
+      form: 'notice',
+    },
+  } as unknown as Message
+}
+
 function toolResultMessage(
   id: string,
   callId: string,
@@ -964,6 +979,48 @@ describe('experimental dynamic-tool bridge', () => {
     expect(fresh.methods.startThread).not.toHaveBeenCalled()
     expect(fresh.methods.startTurn).not.toHaveBeenCalled()
     await freshAdapter.close()
+  })
+
+  it('accepts a plugin context injection while dynamic tool calls are pending', async () => {
+    // A background subagent finishing mid-turn used to fail the whole turn
+    // with DYNAMIC_TOOL_UNEXPECTED_INPUT: the guard rejected on the user role,
+    // and DSH gives injected context that role too. That is the orchestrator's
+    // own workflow — start subagents, keep working, collect them as they land.
+    const fake = createFakeClient()
+    const adapter = createAdapter(fake, true)
+    const { initialUser, response } = await beginDynamicCall(fake, adapter)
+
+    const streamed = collect(adapter.stream(options([
+      initialUser,
+      assistantToolCallMessage('call-claude'),
+      pluginNoticeMessage('jobs-notice', 'background job subagent-1 finished'),
+      toolResultMessage('result-ok', 'call-claude', 'delegated work done'),
+    ])))
+    await vi.waitFor(() => expect(fake.methods.startTurn).toHaveBeenCalled())
+    emitCompletedTurn(fake, 'continued')
+    await expect(streamed).resolves.toBeDefined()
+    await response.catch(() => undefined)
+    await adapter.close()
+  })
+
+  it('still refuses a typed question while dynamic tool calls are pending', async () => {
+    // The guard has a real job: the app-server is waiting for tool results, so
+    // there is nowhere to put a new question until they arrive.
+    const fake = createFakeClient()
+    const adapter = createAdapter(fake, true)
+    const { initialUser, response } = await beginDynamicCall(fake, adapter)
+    const responseFailure = response.catch((error: unknown) => error)
+
+    await expect(collect(adapter.stream(options([
+      initialUser,
+      assistantToolCallMessage('call-claude'),
+      userMessage('interrupting', 'actually, do something else'),
+      toolResultMessage('result-ok', 'call-claude', 'delegated work done'),
+    ])))).rejects.toMatchObject({
+      failure: { code: 'DYNAMIC_TOOL_UNEXPECTED_INPUT' },
+    })
+    await responseFailure
+    await adapter.close()
   })
 
   it('resumes the thread when new user input follows a lost dynamic turn', async () => {

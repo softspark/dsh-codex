@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-09-03
+
+### Fixed
+
+- A background subagent finishing while dynamic tool calls were outstanding
+  failed the whole turn with `DYNAMIC_TOOL_UNEXPECTED_INPUT`. The guard
+  rejected on `role: 'user'`, and DSH gives injected context that role too —
+  it records the producer in `source.kind`, which is `plugin` for a `tool-jobs`
+  notice. So the orchestrator's own workflow, start subagents and collect them
+  as they land, ended the turn.
+
+  The guard now tests `source.kind === 'user'`: a person's typed question is
+  still refused, because the app-server is waiting for tool results and there
+  is nowhere to put a new question until they arrive. `selectUserMessages` had
+  the same shape and the same mistake.
+
+  Two tests cover both directions — a plugin notice is accepted, a typed
+  question is still refused.
+
 ## [1.2.1] - 2026-09-03
 
 ### Fixed

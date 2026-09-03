@@ -1136,11 +1136,18 @@ function validateToolResultBatch(
   const toolMessages = afterCursor.filter(
     (message) => message.source.kind === 'tool',
   )
-  if (
-    afterCursor.some(
-      (message) => message.role === 'user' && message.source.kind !== 'tool',
-    )
-  ) {
+  // Only a real person's turn is unexpected here. `role: 'user'` covers more
+  // than that: DSH gives injected context the user role too, and marks who
+  // produced it with `source.kind: 'plugin'` — a finished background subagent
+  // arrives that way, from `tool-jobs`, while dynamic tool calls are still
+  // outstanding. Rejecting on the role failed the whole turn for a message
+  // that asks nothing of the model, which is the orchestrator's own workflow:
+  // start subagents, keep working, collect them as they land.
+  //
+  // Genuine user input is still refused. There is nowhere to put it: the
+  // app-server is waiting for tool results for this turn, and a new question
+  // cannot be answered until they arrive.
+  if (afterCursor.some(isUserAuthored)) {
     throw new LlmError(
       'A pending dynamic tool turn accepts only corresponding tool results',
       'DYNAMIC_TOOL_UNEXPECTED_INPUT',
@@ -1269,7 +1276,7 @@ function selectUserMessages(
   state: Pick<SessionState, 'lastSeenUserMessageId'> | undefined,
 ): Message[] {
   return messagesAfterCursor(messages, state?.lastSeenUserMessageId, 'resume')
-    .filter((message) => message.role === 'user' && message.source.kind !== 'tool')
+    .filter(isUserAuthored)
 }
 
 /**
@@ -1396,6 +1403,17 @@ function assertNoToolResults(messages: readonly Message[]): void {
       'UNSUPPORTED_TOOL_CONTINUATION',
     )
   }
+}
+
+/**
+ * Whether a message is a person's own turn.
+ *
+ * `role` is not enough: DSH gives injected context the user role and records
+ * its producer in `source.kind`, so a plugin notice and a typed question are
+ * indistinguishable by role alone.
+ */
+function isUserAuthored(message: Message): boolean {
+  return message.role === 'user' && message.source.kind === 'user'
 }
 
 function containsAnyToolResult(messages: readonly Message[]): boolean {
