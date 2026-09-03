@@ -122,6 +122,11 @@ describe('plugin configuration', () => {
     const close = vi.spyOn(AppServerClient.prototype, 'close').mockResolvedValue()
     const ctx = {
       llm: { registerAdapter },
+      // The attachment store is requested through ctx.inject, not read off ctx
+      // directly: cordis refuses an undeclared property with `cannot get
+      // property "attachments" without inject`, which failed the turn as soon
+      // as a message carried an image.
+      inject: vi.fn(),
       effect: vi.fn((execute: () => () => Promise<void>) => {
         cleanup = execute()
         return vi.fn()
@@ -134,6 +139,10 @@ describe('plugin configuration', () => {
       ['codex'],
       expect.any(CodexAdapter),
     )
+    expect(ctx.inject).toHaveBeenCalledWith(
+      ['attachments'],
+      expect.any(Function),
+    )
     expect(cleanup).toBeDefined()
     await cleanup?.()
     expect(unregister).toHaveBeenCalledOnce()
@@ -145,6 +154,7 @@ describe('plugin configuration', () => {
     let cleanup: (() => Promise<void>) | undefined
     const ctx = {
       llm: { registerAdapter: vi.fn(() => unregister) },
+      inject: vi.fn(),
       effect: vi.fn((execute: () => () => Promise<void>) => {
         cleanup = execute()
         return vi.fn()

@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-09-03
+
+### Fixed
+
+- Image input failed the turn outright with `cannot get property "attachments"
+  without inject`. 1.1.0 read `ctx.attachments` directly; cordis refuses a
+  property the plugin never declared, so the first message carrying an image
+  ended the turn — a worse failure than the one image support replaced.
+
+  The store is requested through `ctx.inject(['attachments'], …)`, the optional
+  form. Naming it in the plugin's own `inject` array would have been the wrong
+  cure: that array is a hard requirement, so a deployment mounting no
+  attachment store would stop loading this provider entirely rather than lose
+  image input. A missing store still degrades to a clear per-request error.
+
+  The two composition tests that hand-build a context stub now provide
+  `inject` and assert it was called with `['attachments']` — the declaration
+  itself is the thing that was missing.
+
 ## [1.2.0] - 2026-09-02
 
 ### Changed

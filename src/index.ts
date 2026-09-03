@@ -1,4 +1,5 @@
 import type { Context } from '@deepseek-ai/cordis'
+import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import z from '@deepseek-ai/schemastery'
 
 import {
@@ -191,6 +192,24 @@ export function apply(ctx: Context, config: Config = {}): void {
       ? resolved.dynamicToolTimeoutMs
       : resolved.requestTimeoutMs,
   })
+  // Reading `ctx.attachments` directly throws — cordis refuses a property it
+  // was not asked for, with `cannot get property "attachments" without
+  // inject`, and the turn fails the moment a message carries an image. Naming
+  // it in the plugin's own `inject` array is the wrong cure: that array is a
+  // hard requirement, so a deployment that mounts no attachment store would
+  // stop loading this provider entirely rather than lose image input.
+  //
+  // `ctx.inject` is the optional form. The callback runs when the service is
+  // there, the disposer clears the reference when it goes, and a deployment
+  // without one keeps a working text-only provider.
+  let attachments: AttachmentStore | undefined
+  ctx.inject(['attachments'], (attachmentCtx) => {
+    attachments = attachmentCtx.attachments
+    attachmentCtx.effect(() => () => {
+      attachments = undefined
+    }, 'dshCodex.attachments()')
+  })
+
   const adapterOptions: CodexAdapterOptions = {
     client,
     provider: resolved.provider,
@@ -199,9 +218,10 @@ export function apply(ctx: Context, config: Config = {}): void {
     approvalPolicy: resolved.approvalPolicy,
     allowApiKeyAuth: resolved.allowApiKeyAuth,
     experimentalDynamicTools: resolved.experimentalDynamicTools,
-    // Resolved per request rather than captured here: `ctx.attachments` is a
-    // cordis service that may be installed after this plugin is applied.
-    attachments: () => ctx.attachments,
+    // Read per request: the service can arrive or leave after this plugin is
+    // applied, and an absent store must degrade to a clear per-request error
+    // rather than a provider that never loads.
+    attachments: () => attachments,
     requestTimeoutMs: resolved.requestTimeoutMs,
     turnTimeoutMs: resolved.turnTimeoutMs,
   }
