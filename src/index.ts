@@ -1,5 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
+import { SessionId, type SessionStore } from '@deepseek-ai/dsh-session'
 import z from '@deepseek-ai/schemastery'
 
 import {
@@ -23,6 +24,10 @@ import type {
   CodexApprovalPolicy,
   CodexSandboxMode,
 } from './app-server/types.js'
+import {
+  resolveSessionPermissions,
+  type CodexThreadPermissions,
+} from './session-permissions.js'
 
 export const name = 'dsh-codex'
 export const inject = ['llm']
@@ -89,6 +94,7 @@ export interface Config {
   readonly cwd?: string
   readonly sandbox?: CodexSandboxMode
   readonly approvalPolicy?: 'never' | 'on-request' | 'untrusted'
+  readonly inheritSessionPermissions?: boolean
   readonly allowApiKeyAuth?: boolean
   readonly experimentalDynamicTools?: boolean
   readonly dynamicToolTimeoutMs?: number
@@ -110,6 +116,7 @@ export const Config: z<Config> = z.object({
     z.const('on-request'),
     z.const('untrusted'),
   ]).default('untrusted'),
+  inheritSessionPermissions: z.boolean().default(false),
   allowApiKeyAuth: z.boolean().default(false),
   experimentalDynamicTools: z.boolean().default(false),
   dynamicToolTimeoutMs: z.number()
@@ -132,6 +139,7 @@ export interface ResolvedConfig {
   readonly cwd: string
   readonly sandbox: CodexSandboxMode
   readonly approvalPolicy: CodexApprovalPolicy
+  readonly inheritSessionPermissions: boolean
   readonly allowApiKeyAuth: boolean
   readonly experimentalDynamicTools: boolean
   readonly dynamicToolTimeoutMs: number
@@ -169,6 +177,7 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     cwd,
     sandbox: config.sandbox ?? 'workspace-write',
     approvalPolicy: config.approvalPolicy ?? 'untrusted',
+    inheritSessionPermissions: config.inheritSessionPermissions ?? false,
     allowApiKeyAuth: config.allowApiKeyAuth ?? false,
     experimentalDynamicTools: config.experimentalDynamicTools ?? false,
     dynamicToolTimeoutMs,
@@ -212,6 +221,20 @@ export function apply(ctx: Context, config: Config = {}): void {
     }, 'dshCodex.attachments()')
   })
 
+  let sessions: SessionStore | undefined
+  if (resolved.inheritSessionPermissions) {
+    ctx.inject(['sessions'], (sessionCtx) => {
+      sessions = sessionCtx.sessions
+      sessionCtx.effect(() => () => {
+        sessions = undefined
+      }, 'dshCodex.sessions()')
+    })
+  }
+
+  const fallbackPermissions: CodexThreadPermissions = {
+    sandbox: resolved.sandbox,
+    approvalPolicy: resolved.approvalPolicy,
+  }
   const adapterOptions: CodexAdapterOptions = {
     client,
     provider: resolved.provider,
@@ -224,6 +247,15 @@ export function apply(ctx: Context, config: Config = {}): void {
     // applied, and an absent store must degrade to a clear per-request error
     // rather than a provider that never loads.
     attachments: () => attachments,
+    ...(resolved.inheritSessionPermissions
+      ? {
+          sessionPermissions: (sessionId) => {
+            if (sessionId === undefined) return undefined
+            const session = sessions?.get(SessionId(String(sessionId)))
+            return resolveSessionPermissions(fallbackPermissions, session?.events)
+          },
+        }
+      : {}),
     // Codex renders every refusal as its own `dynamic tool request failed`,
     // with no reason. A session that refused all seven of its tool calls was
     // indistinguishable from one that timed out; this is where the reason

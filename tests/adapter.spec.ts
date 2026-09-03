@@ -15,6 +15,7 @@ import {
   CodexAdapter,
 } from '../src/adapter.js'
 import type { AppServerClient } from '../src/app-server/client.js'
+import type { CodexThreadPermissions } from '../src/session-permissions.js'
 import type {
   AppServerNotification,
   CodexAccountStatus,
@@ -80,6 +81,7 @@ function createAdapter(
   fake: FakeClient,
   allowApiKeyAuth = false,
   attachments?: AttachmentStore,
+  sessionPermissions?: () => CodexThreadPermissions | undefined,
 ): CodexAdapter {
   return new CodexAdapter({
     client: fake.client,
@@ -90,6 +92,7 @@ function createAdapter(
     requestTimeoutMs: 100,
     turnTimeoutMs: 1_000,
     ...(attachments === undefined ? {} : { attachments: () => attachments }),
+    ...(sessionPermissions === undefined ? {} : { sessionPermissions }),
   })
 }
 
@@ -347,6 +350,27 @@ describe('CodexAdapter', () => {
     ])
     expect(fake.methods.startTurn).toHaveBeenCalledWith(
       expect.objectContaining({ effort: 'high' }),
+      expect.any(Object),
+    )
+  })
+
+  it('applies resolved session permissions when starting a fresh thread', async () => {
+    const fake = createFakeClient()
+    const sessionPermissions = vi.fn(() => ({
+      sandbox: 'danger-full-access' as const,
+      approvalPolicy: 'never' as const,
+    }))
+    const adapter = createAdapter(fake, false, undefined, sessionPermissions)
+    completeNextTurn(fake)
+
+    await collect(adapter.stream(generateOptions()))
+
+    expect(sessionPermissions).toHaveBeenCalledWith('session-1')
+    expect(fake.methods.startThread).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sandbox: 'danger-full-access',
+        approvalPolicy: 'never',
+      }),
       expect.any(Object),
     )
   })

@@ -63,6 +63,8 @@ Codex and DSH each have a permission model. The adapter must not translate a per
 
 Stable mode relies on Codex's own sandbox and approvals. In opt-in dynamic mode, DSH retains its own sandbox, permission, audit, and tool-result persistence controls; the adapter cannot bypass them by executing a tool directly.
 
+Session permission inheritance is separately opt-in. For a newly started or resumed thread, the adapter may copy a validated sandbox override from that exact DSH Session and map the deterministic DSH `never` approval policy to Codex `never`. It never converts interactive DSH `ask` into authorization, and missing or malformed session state retains the configured static fallback.
+
 ## Supply chain
 
 The package uses exact dependency versions and a lockfile. npm lifecycle scripts are disabled. CI runs high-severity dependency audit, signature verification, SARIF generation, multi-OS tests, and package inspection. Tagged publication uses npm provenance.

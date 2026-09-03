@@ -23,6 +23,7 @@ describe('plugin configuration', () => {
       cwd: process.cwd(),
       sandbox: 'workspace-write',
       approvalPolicy: 'untrusted',
+      inheritSessionPermissions: false,
       allowApiKeyAuth: false,
       experimentalDynamicTools: false,
       requestTimeoutMs: 30_000,
@@ -44,6 +45,14 @@ describe('plugin configuration', () => {
     expect(resolveConfig({ cwd: '/workspace' })).toMatchObject({
       experimentalDynamicTools: false,
       dynamicToolTimeoutMs: 600_000,
+    })
+  })
+
+  it('enables session permission inheritance only through explicit config', () => {
+    expect(resolveConfig({ inheritSessionPermissions: true })).toMatchObject({
+      inheritSessionPermissions: true,
+      sandbox: 'workspace-write',
+      approvalPolicy: 'untrusted',
     })
   })
 
@@ -217,6 +226,7 @@ describe('Cordis composition', () => {
       // is what @deepseek-ai/dsh 0.1.1-rc.2 actually ships.
       '@deepseek-ai/cordis': '4.0.2',
       '@deepseek-ai/dsh-llm': '0.1.1-rc.2',
+      '@deepseek-ai/dsh-session': '0.1.1-rc.2',
     })
     expect(patch).toContain("name: '@softspark/dsh-codex'")
   })

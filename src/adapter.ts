@@ -26,6 +26,7 @@ import type {
 
 import type { AppServerClient } from './app-server/client.js'
 import { safeErrorMessage } from './app-server/redaction.js'
+import type { CodexThreadPermissions } from './session-permissions.js'
 import type {
   AppServerNotification,
   AppServerRequest,
@@ -104,6 +105,13 @@ export interface CodexAdapterOptions {
    * which is reported per request rather than at construction.
    */
   readonly attachments?: () => AttachmentStore | undefined
+  /**
+   * Resolve explicit DSH session permission overrides for a newly created or
+   * resumed Codex thread. Undefined keeps the configured static fallback.
+   */
+  readonly sessionPermissions?: (
+    sessionId: GenerateOptions['sessionId'],
+  ) => CodexThreadPermissions | undefined
   /**
    * Called when a dynamic tool call is refused, with the failure class and its
    * message.
@@ -195,6 +203,7 @@ export class CodexAdapter extends LlmAdapter {
   private readonly allowApiKeyAuth: boolean
   private readonly experimentalDynamicTools: boolean
   private readonly attachments: (() => AttachmentStore | undefined) | undefined
+  private readonly sessionPermissions: CodexAdapterOptions['sessionPermissions']
   private readonly onRejectedToolCall: CodexAdapterOptions['onRejectedToolCall']
   private readonly requestTimeoutMs: number
   private readonly turnTimeoutMs: number
@@ -223,6 +232,7 @@ export class CodexAdapter extends LlmAdapter {
     this.requestTimeoutMs = positiveInteger(options.requestTimeoutMs, 'requestTimeoutMs')
     this.turnTimeoutMs = positiveInteger(options.turnTimeoutMs, 'turnTimeoutMs')
     this.attachments = options.attachments
+    this.sessionPermissions = options.sessionPermissions
     this.onRejectedToolCall = options.onRejectedToolCall
     if (this.experimentalDynamicTools) {
       this.unregisterServerRequestHandler = this.client.registerServerRequestHandler(
@@ -391,6 +401,7 @@ export class CodexAdapter extends LlmAdapter {
       options,
       ephemeral,
       replay,
+      this.resolveThreadPermissions(options.sessionId),
       toolCatalog,
     )
     if (current === undefined) this.rememberSession(sessionKey, state)
@@ -810,14 +821,15 @@ export class CodexAdapter extends LlmAdapter {
   private async startSession(
     options: GenerateOptions,
     ephemeral: boolean,
+    permissions: CodexThreadPermissions,
     toolCatalog?: ToolCatalog,
   ): Promise<SessionState> {
     const thread = await this.client.startThread(
       {
         model: options.model,
         cwd: this.cwd,
-        sandbox: this.sandbox,
-        approvalPolicy: this.approvalPolicy,
+        sandbox: permissions.sandbox,
+        approvalPolicy: permissions.approvalPolicy,
         developerInstructions: toolCatalog === undefined
           ? STABLE_BRIDGE_INSTRUCTIONS
           : DYNAMIC_BRIDGE_INSTRUCTIONS,
@@ -840,10 +852,11 @@ export class CodexAdapter extends LlmAdapter {
     options: GenerateOptions,
     ephemeral: boolean,
     replay: ReplayCandidate | undefined,
+    permissions: CodexThreadPermissions,
     toolCatalog?: ToolCatalog,
   ): Promise<SessionState> {
     if (replay === undefined || ephemeral) {
-      return this.startSession(options, ephemeral, toolCatalog)
+      return this.startSession(options, ephemeral, permissions, toolCatalog)
     }
     // `thread/resume` accepts `dynamicTools`, verified against the app-server:
     // start a thread with a catalog, run a turn so a rollout exists, and resume
@@ -854,8 +867,8 @@ export class CodexAdapter extends LlmAdapter {
         threadId: replay.threadId,
         model: options.model,
         cwd: this.cwd,
-        sandbox: this.sandbox,
-        approvalPolicy: this.approvalPolicy,
+        sandbox: permissions.sandbox,
+        approvalPolicy: permissions.approvalPolicy,
         developerInstructions: toolCatalog === undefined
           ? STABLE_BRIDGE_INSTRUCTIONS
           : DYNAMIC_BRIDGE_INSTRUCTIONS,
@@ -872,6 +885,15 @@ export class CodexAdapter extends LlmAdapter {
       ...(replay.lastSeenUserMessageId === undefined
         ? {}
         : { lastSeenUserMessageId: replay.lastSeenUserMessageId }),
+    }
+  }
+
+  private resolveThreadPermissions(
+    sessionId: GenerateOptions['sessionId'],
+  ): CodexThreadPermissions {
+    return this.sessionPermissions?.(sessionId) ?? {
+      sandbox: this.sandbox,
+      approvalPolicy: this.approvalPolicy,
     }
   }
 

@@ -101,6 +101,7 @@ The plugin maps DSH text messages, model choice, reasoning effort, streaming, us
 | `cwd` | `process.cwd()` | Working directory for Codex threads. |
 | `sandbox` | `workspace-write` | Also accepts `read-only` and `danger-full-access`. |
 | `approvalPolicy` | `untrusted` | Also accepts `never` and `on-request`. |
+| `inheritSessionPermissions` | `false` | When enabled, applies explicit per-session DSH sandbox overrides and maps DSH `never` to Codex `never` for newly started or resumed threads. Missing or interactive session state retains the static fallback. |
 | `allowApiKeyAuth` | `false` | When true, permits an API-key login already owned by Codex. The plugin never receives the key. |
 | `experimentalDynamicTools` | `false` | Opts into the experimental DSH tool bridge and app-server experimental API. |
 | `dynamicToolTimeoutMs` | `600000` | Bounds a deferred DSH tool call from 1,000 to 3,600,000 ms. |
@@ -111,7 +112,7 @@ See [configuration reference](kb/reference/configuration.md).
 
 ## Tool boundary
 
-Codex app-server built-in tools run inside Codex under the selected Codex sandbox and approval policy.
+Codex app-server built-in tools run inside Codex under the selected Codex sandbox and approval policy. With `inheritSessionPermissions: true`, a newly started or resumed thread reads only the matching DSH Session log: the explicit Full pair (`danger-full-access` plus `never`) becomes the same Codex pair, while absent, malformed, or interactive approval state keeps the configured fallback.
 
 By default, DSH tools remain unavailable and tool-result continuation fails closed. With `experimentalDynamicTools: true`, the adapter registers the current DSH tool catalog with Codex, emits canonical DSH tool-call chunks, lets the normal DSH agent loop execute the tool, then returns the correlated text result to the same Codex turn. The bridge never executes DSH tools directly.
 

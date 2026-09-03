@@ -41,6 +41,7 @@ The implemented plugin fields are:
 | `cwd` | `process.cwd()` | Working directory for Codex threads. |
 | `sandbox` | `workspace-write` | Also accepts `read-only` and `danger-full-access`. |
 | `approvalPolicy` | `untrusted` | Also accepts `never` and `on-request`. |
+| `inheritSessionPermissions` | `false` | For newly started or resumed threads, use an explicit DSH session sandbox override and translate only DSH `never` to Codex `never`; otherwise keep the static fallback. |
 | `allowApiKeyAuth` | `false` | Permits an API-key login already owned by Codex; it does not expose an API key to the plugin or child environment. |
 | `experimentalDynamicTools` | `false` | Enables the experimental DSH tool bridge and app-server experimental API. |
 | `dynamicToolTimeoutMs` | `600000` | Integer from 1,000 through 3,600,000 ms for deferred tool calls and their incoming server requests. |

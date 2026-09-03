@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-09-03
+
+### Added
+
+- Optional `inheritSessionPermissions` mapping for newly started or resumed Codex threads. It consumes explicit per-session DSH sandbox overrides and maps only deterministic DSH `never` approval to Codex `never`; missing and interactive state retains the static fail-closed fallback.
+
 ## [1.3.0] - 2026-09-03
 
 ### Added
