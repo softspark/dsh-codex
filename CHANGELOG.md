@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-09-03
+
+### Added
+
+- `onRejectedToolCall`, called with the failure class whenever a dynamic tool
+  call is refused. Every one of the nine refusals in `handleServerRequest`
+  routes through it.
+
+  Codex renders each of them as its own `dynamic tool request failed`, with no
+  reason attached, so a lost turn, a pending-call limit, an unknown tool and a
+  duplicate id are indistinguishable from outside. A real session refused all
+  seven of its tool calls over two and a half minutes and could not be told
+  apart from one that had timed out; the reason existed the whole time and had
+  nowhere to go. The plugin wires this to `ctx.logger`, so `make logs` carries
+  it whatever Codex chooses to display.
+
+### Changed
+
+- `safeErrorMessage` prefixes the stable failure class when the error carries
+  one, so the string that reaches the app-server names the class too.
+
 ## [1.2.2] - 2026-09-03
 
 ### Fixed

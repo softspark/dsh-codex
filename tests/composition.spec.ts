@@ -127,6 +127,7 @@ describe('plugin configuration', () => {
       // property "attachments" without inject`, which failed the turn as soon
       // as a message carried an image.
       inject: vi.fn(),
+      logger: vi.fn(() => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() })),
       effect: vi.fn((execute: () => () => Promise<void>) => {
         cleanup = execute()
         return vi.fn()
@@ -155,6 +156,7 @@ describe('plugin configuration', () => {
     const ctx = {
       llm: { registerAdapter: vi.fn(() => unregister) },
       inject: vi.fn(),
+      logger: vi.fn(() => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() })),
       effect: vi.fn((execute: () => () => Promise<void>) => {
         cleanup = execute()
         return vi.fn()

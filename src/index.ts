@@ -202,6 +202,8 @@ export function apply(ctx: Context, config: Config = {}): void {
   // `ctx.inject` is the optional form. The callback runs when the service is
   // there, the disposer clears the reference when it goes, and a deployment
   // without one keeps a working text-only provider.
+  const logger = ctx.logger('dsh-codex')
+
   let attachments: AttachmentStore | undefined
   ctx.inject(['attachments'], (attachmentCtx) => {
     attachments = attachmentCtx.attachments
@@ -222,6 +224,18 @@ export function apply(ctx: Context, config: Config = {}): void {
     // applied, and an absent store must degrade to a clear per-request error
     // rather than a provider that never loads.
     attachments: () => attachments,
+    // Codex renders every refusal as its own `dynamic tool request failed`,
+    // with no reason. A session that refused all seven of its tool calls was
+    // indistinguishable from one that timed out; this is where the reason
+    // becomes readable, in `make logs`, independent of what Codex displays.
+    onRejectedToolCall: ({ code, message, tool }) => {
+      logger.warn(
+        'dynamic tool call refused: %s%s — %s',
+        code,
+        tool === undefined ? '' : ` (${tool})`,
+        message,
+      )
+    },
     requestTimeoutMs: resolved.requestTimeoutMs,
     turnTimeoutMs: resolved.turnTimeoutMs,
   }

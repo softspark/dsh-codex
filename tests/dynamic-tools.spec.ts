@@ -981,6 +981,48 @@ describe('experimental dynamic-tool bridge', () => {
     await freshAdapter.close()
   })
 
+  it('reports why a dynamic tool call was refused', async () => {
+    // Codex renders every refusal as its own `dynamic tool request failed`,
+    // with no reason attached, so a session that refused all seven of its
+    // calls was indistinguishable from one that timed out. This seam is what
+    // makes the failure class readable outside Codex's own wording.
+    const refusals: { code: string, tool?: string }[] = []
+    const fake = createFakeClient()
+    const adapter = new CodexAdapter({
+      client: fake.client,
+      cwd: '/workspace',
+      sandbox: 'workspace-write',
+      approvalPolicy: 'untrusted',
+      allowApiKeyAuth: false,
+      experimentalDynamicTools: true,
+      requestTimeoutMs: 100,
+      turnTimeoutMs: 1_000,
+      onRejectedToolCall: ({ code, tool }) => {
+        refusals.push(tool === undefined ? { code } : { code, tool })
+      },
+    })
+
+    // A call arriving for a thread with no live turn: the exact shape behind
+    // seven silent failures in a real session.
+    await expect(fake.requestServer({
+      id: 'rpc-orphan',
+      method: 'item/tool/call',
+      params: {
+        threadId: 'thread-unknown',
+        turnId: 'turn-unknown',
+        callId: 'call-orphan',
+        namespace: null,
+        tool: 'skill',
+        arguments: { name: 'plugin-creator' },
+      },
+    })).rejects.toMatchObject({ code: 'DYNAMIC_TOOL_STATE_LOST' })
+
+    expect(refusals).toEqual([
+      { code: 'DYNAMIC_TOOL_STATE_LOST', tool: 'skill' },
+    ])
+    await adapter.close()
+  })
+
   it('accepts a plugin context injection while dynamic tool calls are pending', async () => {
     // A background subagent finishing mid-turn used to fail the whole turn
     // with DYNAMIC_TOOL_UNEXPECTED_INPUT: the guard rejected on the user role,

@@ -104,6 +104,22 @@ export interface CodexAdapterOptions {
    * which is reported per request rather than at construction.
    */
   readonly attachments?: () => AttachmentStore | undefined
+  /**
+   * Called when a dynamic tool call is refused, with the failure class and its
+   * message.
+   *
+   * Every refusal below reaches the model as Codex's own
+   * `dynamic tool request failed`, with no reason attached — which is
+   * indistinguishable from a lost turn, a pending-call limit, an unknown tool
+   * and a duplicate id. A session that failed every call for two and a half
+   * minutes could not be told apart from one that timed out. This is the seam
+   * that puts the reason somewhere a person can read it.
+   */
+  readonly onRejectedToolCall?: (failure: {
+    readonly code: string
+    readonly message: string
+    readonly tool?: string
+  }) => void
 }
 
 interface ToolCatalog {
@@ -179,6 +195,7 @@ export class CodexAdapter extends LlmAdapter {
   private readonly allowApiKeyAuth: boolean
   private readonly experimentalDynamicTools: boolean
   private readonly attachments: (() => AttachmentStore | undefined) | undefined
+  private readonly onRejectedToolCall: CodexAdapterOptions['onRejectedToolCall']
   private readonly requestTimeoutMs: number
   private readonly turnTimeoutMs: number
   private readonly sessions = new Map<string, SessionState>()
@@ -206,6 +223,7 @@ export class CodexAdapter extends LlmAdapter {
     this.requestTimeoutMs = positiveInteger(options.requestTimeoutMs, 'requestTimeoutMs')
     this.turnTimeoutMs = positiveInteger(options.turnTimeoutMs, 'turnTimeoutMs')
     this.attachments = options.attachments
+    this.onRejectedToolCall = options.onRejectedToolCall
     if (this.experimentalDynamicTools) {
       this.unregisterServerRequestHandler = this.client.registerServerRequestHandler(
         (request, signal) => this.handleServerRequest(request, signal),
@@ -612,15 +630,34 @@ export class CodexAdapter extends LlmAdapter {
     throw toLlmError(error)
   }
 
+  /**
+   * Refuse one dynamic tool call, and say why somewhere it can be read.
+   *
+   * The returned rejection still travels to the app-server; the callback is
+   * what makes the reason survive Codex flattening it to a generic string.
+   */
+  private refuseToolCall(
+    code: string,
+    message: string,
+    tool?: string,
+  ): Promise<JsonValue> {
+    this.onRejectedToolCall?.({
+      code,
+      message,
+      ...(tool === undefined ? {} : { tool }),
+    })
+    return Promise.reject(new LlmError(message, code))
+  }
+
   private handleServerRequest(
     request: AppServerRequest,
     signal: AbortSignal,
   ): Promise<JsonValue> {
     if (request.method !== 'item/tool/call') {
-      return Promise.reject(new LlmError(
-        `Unsupported Codex server request "${request.method}"`,
+      return this.refuseToolCall(
         'UNSUPPORTED_SERVER_REQUEST',
-      ))
+        `Unsupported Codex server request "${request.method}"`,
+      )
     }
     const call = parseExperimentalDynamicToolCall(request.params)
     try {
@@ -630,54 +667,62 @@ export class CodexAdapter extends LlmAdapter {
     }
     const turn = this.turnsByThread.get(call.threadId)
     if (turn === undefined || turn.closed) {
-      return Promise.reject(new LlmError(
-        'Dynamic tool call has no live Codex turn',
+      return this.refuseToolCall(
         'DYNAMIC_TOOL_STATE_LOST',
-      ))
+        'Dynamic tool call has no live Codex turn',
+        call.tool,
+      )
     }
     if (turn.turnId !== undefined && call.turnId !== turn.turnId) {
-      return Promise.reject(new LlmError(
-        'Dynamic tool call references another Codex turn',
+      return this.refuseToolCall(
         'DYNAMIC_TOOL_PROTOCOL',
-      ))
+        'Dynamic tool call references another Codex turn',
+        call.tool,
+      )
     }
     if (call.namespace !== null) {
-      return Promise.reject(new LlmError(
-        'Namespaced dynamic tools are not supported',
+      return this.refuseToolCall(
         'DYNAMIC_TOOL_NAMESPACE_UNSUPPORTED',
-      ))
+        'Namespaced dynamic tools are not supported',
+        call.tool,
+      )
     }
     if (turn.state.toolCatalog?.byName.has(call.tool) !== true) {
-      return Promise.reject(new LlmError(
-        `Codex requested unknown dynamic tool "${call.tool}"`,
+      return this.refuseToolCall(
         'DYNAMIC_TOOL_UNKNOWN',
-      ))
+        `Codex requested unknown dynamic tool "${call.tool}"`,
+        call.tool,
+      )
     }
     if (turn.seenCallIds.has(call.callId)) {
-      return Promise.reject(new LlmError(
-        `Duplicate dynamic tool call id "${call.callId}"`,
+      return this.refuseToolCall(
         'DYNAMIC_TOOL_DUPLICATE',
-      ))
+        `Duplicate dynamic tool call id "${call.callId}"`,
+        call.tool,
+      )
     }
     if (turn.pendingCalls.size >= MAX_PENDING_DYNAMIC_TOOL_CALLS) {
-      return Promise.reject(new LlmError(
-        `Dynamic tool pending-call limit ${MAX_PENDING_DYNAMIC_TOOL_CALLS} exceeded`,
+      return this.refuseToolCall(
         'DYNAMIC_TOOL_PENDING_LIMIT',
-      ))
+        `Dynamic tool pending-call limit ${MAX_PENDING_DYNAMIC_TOOL_CALLS} exceeded`,
+        call.tool,
+      )
     }
     turn.dynamicCallCount += 1
     if (turn.dynamicCallCount > MAX_DYNAMIC_TOOL_CALLS_PER_TURN) {
-      return Promise.reject(new LlmError(
-        `Dynamic tool turn-call limit ${MAX_DYNAMIC_TOOL_CALLS_PER_TURN} exceeded`,
+      return this.refuseToolCall(
         'DYNAMIC_TOOL_CALL_LIMIT',
-      ))
+        `Dynamic tool turn-call limit ${MAX_DYNAMIC_TOOL_CALLS_PER_TURN} exceeded`,
+        call.tool,
+      )
     }
     const argumentBytes = utf8Bytes(JSON.stringify(call.arguments))
     if (argumentBytes > MAX_DYNAMIC_TOOL_ARGUMENT_BYTES) {
-      return Promise.reject(new LlmError(
-        `Dynamic tool arguments exceed ${MAX_DYNAMIC_TOOL_ARGUMENT_BYTES} UTF-8 bytes`,
+      return this.refuseToolCall(
         'DYNAMIC_TOOL_ARGUMENTS_TOO_LARGE',
-      ))
+        `Dynamic tool arguments exceed ${MAX_DYNAMIC_TOOL_ARGUMENT_BYTES} UTF-8 bytes`,
+        call.tool,
+      )
     }
 
     turn.seenCallIds.add(call.callId)

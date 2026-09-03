@@ -17,8 +17,24 @@ export function redactSensitive(value: string): string {
     .slice(0, MAX_ERROR_CHARS)
 }
 
+/**
+ * A redacted, human-readable account of a failure, prefixed with its stable
+ * failure class when there is one.
+ *
+ * The class matters here because this string is the only thing the app-server
+ * ever sees. Codex renders its own `dynamic tool request failed` regardless, so
+ * whoever reads the wire — or a transcript — otherwise cannot tell a pending
+ * call limit from a lost turn from an unknown tool. `HarnessError` carries the
+ * class in `code`; nothing else does, so nothing else is prefixed.
+ */
 export function safeErrorMessage(error: unknown): string {
-  if (error instanceof Error) return redactSensitive(error.message)
+  if (error instanceof Error) {
+    const code = (error as { readonly code?: unknown }).code
+    const message = redactSensitive(error.message)
+    return typeof code === 'string' && code.length > 0
+      ? `[${code}] ${message}`
+      : message
+  }
   if (typeof error === 'string') return redactSensitive(error)
   return 'Unknown app-server error'
 }
