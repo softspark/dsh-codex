@@ -2,16 +2,26 @@
 title: "dsh-codex verification on 2026-09-06"
 category: procedures
 service: dsh-codex
-version: "1.0.0"
+version: "1.5.0"
 tags: [verification, release, provenance, compatibility]
 created: "2026-09-06"
 last_updated: "2026-09-06"
-description: "Separates published 1.4.0 checks from the local 1.5.0 compatibility candidate."
+description: "Published 1.5.0 verification with preserved historical and pre-release runtime evidence."
 ---
 
 # Verification on 2026-09-06
 
-## Published artifact: 1.4.0
+## Published artifact: 1.5.0
+
+- [Public release](https://github.com/softspark/dsh-codex/releases/tag/v1.5.0); npm `latest` resolves to `1.5.0`.
+- [Publish workflow](https://github.com/softspark/dsh-codex/actions/runs/34054724737) passed on `9308a36414aec2caf72c9f4333ea33309257f858`.
+- Registry metadata identifies SLSA provenance v1. A new npm 11.13.0 artifact-inspection consumer installed the exact Codex 1.5.0/orchestrator 2.0.0 pair with lifecycle scripts and automatic peer installation disabled. It verified **109 registry signatures and 14 attestations**; its dependency audit reported zero vulnerabilities.
+- All **37** shipped runtime/configuration, declaration and map files were compared byte-for-byte with the qualified candidate tarball and matched. `lib/index.js` SHA-256: `006317fffc4b0c661ca393cb9f3e6027ac9969f77ebe6c356fd61370ab709a6c`.
+- Expected exports, LICENSE, NOTICE and bundle configuration exist. Source, tests, KB and .github do not ship.
+- No paid model calls were repeated in this artifact-verification pass. The unchanged runtime files retain the pre-release qualification recorded below; registry signatures and provenance were checked independently against the actual published versions.
+
+
+## Earlier published artifact: 1.4.0
 
 - npm integrity: `sha512-+5OB3BfCbGmRQJIUjsg/pYxBjd2JV0f7fulldVhCuo6UClbrzuEHa9k5axdssnlpEfTdBLCfzgxca1l7dXxedQ==`.
 - Registry metadata contains a SLSA provenance v1 attestation and registry signature.
@@ -20,7 +30,7 @@ description: "Separates published 1.4.0 checks from the local 1.5.0 compatibilit
 - The exact published pair also installed through pnpm `11.24.0` into a separate DSH `0.1.1-rc.2` profile. Its web host booted, the composed `llm` service listed seven Codex models and returned `DSH_HOST_CODEX_OK`; native Copilot Gemini returned `DSH_GEMINI_CHILD_OK`. The old Claude SDK failed its child request and is documented in the orchestrator record.
 - The smoke adapter used a disposable working directory and `read-only` sandbox with `untrusted` approvals. No credential file was read, copied or changed by the test script.
 
-## Local candidate: 1.5.0
+## Pre-release qualification: 1.5.0
 
 - Node `22.22.2`, npm `11.13.0`, pnpm `11.24.0`.
 - DSH `0.1.2-rc.1`: required-file, version, KB, TypeScript, ESLint, full coverage suite, build, source audit and permission audit passed. All 154 tests passed; coverage was 88.66% statements, 82.46% branches, 91.11% functions and 91.09% lines.
@@ -33,6 +43,9 @@ description: "Separates published 1.4.0 checks from the local 1.5.0 compatibilit
 
 ## Limits and release gate
 
-The `1.5.0` candidate has not been published. Its local tarball checks do not establish registry provenance for a future release. Repeat this SOP against the exact published version and link this record from its release page. The current browser cancellation and restart-recovery checks passed.
+Version `1.5.0` is published and its registry artifact is independently verified
+above. The recorded model, browser cancellation and restart-recovery checks
+used the byte-identical qualified candidate. This post-release pass did not
+repeat those model calls in a fresh registry profile.
 
 The regular user DSH installation has not been located or upgraded. All runtime work used disposable profiles with `DSH_TELEMETRY_DISABLED=1`.
