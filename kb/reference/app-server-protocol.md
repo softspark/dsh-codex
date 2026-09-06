@@ -2,6 +2,7 @@
 title: "Codex App-Server Protocol Surface"
 category: reference
 service: dsh-codex
+version: "1.0.0"
 tags: [codex, app-server, json-rpc, protocol, streaming]
 created: "2026-08-26"
 last_updated: "2026-08-26"

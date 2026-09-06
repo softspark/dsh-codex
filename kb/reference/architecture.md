@@ -2,6 +2,7 @@
 title: "dsh-codex Architecture"
 category: reference
 service: dsh-codex
+version: "1.0.0"
 tags: [architecture, dsh, codex, json-rpc, stdio, images, recovery]
 created: "2026-08-26"
 last_updated: "2026-09-02"

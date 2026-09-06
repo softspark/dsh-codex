@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
 import {
-  CallId,
   LlmAdapter,
   LlmError,
   ReasoningEffortId,
@@ -25,6 +24,7 @@ import type {
 } from '@deepseek-ai/dsh-attachment'
 
 import type { AppServerClient } from './app-server/client.js'
+import { toolCallId } from './dsh-compat.js'
 import { safeErrorMessage } from './app-server/redaction.js'
 import type { CodexThreadPermissions } from './session-permissions.js'
 import type {
@@ -504,7 +504,7 @@ export class CodexAdapter extends LlmAdapter {
         for (const block of blockOrder) yield blockEnd(block)
         for (const [offset, call] of calls.entries()) {
           const index = blockOrder.length + offset
-          const id = CallId(call.call.callId)
+          const id = toolCallId(call.call.callId)
           const argumentsText = JSON.stringify(call.call.arguments)
           yield { type: 'block-start', index, blockType: 'tool-call' }
           yield {

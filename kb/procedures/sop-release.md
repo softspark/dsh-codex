@@ -2,6 +2,7 @@
 title: "SOP: Release dsh-codex"
 category: procedures
 service: dsh-codex
+version: "1.0.0"
 tags: [sop, release, npm, provenance, signatures]
 created: "2026-08-26"
 last_updated: "2026-08-27"

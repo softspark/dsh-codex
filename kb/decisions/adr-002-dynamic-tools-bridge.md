@@ -2,6 +2,7 @@
 title: "ADR-002: Opt-in Codex Dynamic Tools Bridge"
 category: decisions
 service: dsh-codex
+version: "1.0.0"
 tags: [adr, codex, dsh, dynamic-tools, security]
 created: "2026-08-26"
 last_updated: "2026-08-26"

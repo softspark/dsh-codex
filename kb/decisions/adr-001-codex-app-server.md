@@ -2,6 +2,7 @@
 title: "ADR-001: Use Codex App Server as the Provider Boundary"
 category: decisions
 service: dsh-codex
+version: "1.0.0"
 tags: [architecture, codex, app-server, authentication, dsh]
 created: "2026-08-26"
 last_updated: "2026-08-26"

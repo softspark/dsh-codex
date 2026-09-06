@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - Unreleased
+
+### Added
+
+- Support for DSH `0.1.2-rc.1` while retaining `0.1.1-rc.2`: accept both session event APIs and preserve tool-call IDs across the upstream constructor rename.
+
+### Fixed
+
+- Use the newest session permission event even when it selects interactive approval or contains invalid data. An older `never` approval or full-access sandbox no longer overrides the static fallback.
+- Refresh security support, install instructions, Dependabot commit prefixes, and reproducible post-release provenance verification.
+
 ## [1.4.0] - 2026-09-03
 
 ### Added

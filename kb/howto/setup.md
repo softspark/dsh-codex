@@ -2,9 +2,10 @@
 title: "Set Up dsh-codex from Source"
 category: howto
 service: dsh-codex
+version: "1.0.0"
 tags: [setup, source, codex, dsh, authentication]
 created: "2026-08-26"
-last_updated: "2026-08-26"
+last_updated: "2026-09-06"
 description: "Builds and checks dsh-codex against a local ChatGPT-authenticated Codex CLI."
 ---
 
@@ -95,8 +96,8 @@ The artifact must contain `lib/`, `cordis.patch.yml`, `README.md`, `CHANGELOG.md
 Create the tarball only for a disposable DSH profile test:
 
 ```bash
-npm pack --ignore-scripts
-dsh plugin --profile <disposable-profile> add file:./softspark-dsh-codex-1.0.0.tgz --save-exact
+PLUGIN_TGZ="$(npm pack --ignore-scripts --silent)"
+dsh plugin --profile web add "file:$(pwd)/$PLUGIN_TGZ" --save-exact --ignore-scripts
 ```
 
 Start that profile with no OpenAI API key in the environment and confirm provider `codex` appears. Do not modify the real Codex credential store.

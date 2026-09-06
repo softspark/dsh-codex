@@ -2,9 +2,10 @@
 title: "SOP: Post-Release Testing"
 category: procedures
 service: dsh-codex
+version: "1.0.0"
 tags: [sop, post-release, npm, provenance, smoke-test]
 created: "2026-08-26"
-last_updated: "2026-08-27"
+last_updated: "2026-09-06"
 description: "Verifies npm provenance, signatures, package contents, Codex authentication, and DSH composition after release."
 ---
 
@@ -30,6 +31,7 @@ Prove that the public artifact, not the maintainer checkout, works with the decl
 ```bash
 npm view @softspark/dsh-codex@X.Y.Z version dist.integrity dist.tarball
 npm view @softspark/dsh-codex@X.Y.Z engines peerDependencies
+npm view @softspark/dsh-codex@X.Y.Z dist.attestations dist.signatures --json
 ```
 
 - [ ] Version and peer seams match the release.
@@ -73,7 +75,16 @@ codex app-server --help
 
 ### 5. Run isolated DSH composition smoke
 
-Set `DSH_HOME` to a disposable path. Install the released tarball into the tested DSH profile using the command recorded by the release composition test.
+Set `DSH_HOME` to a disposable path, select the release's compatible DSH host, and install the exact registry artifact:
+
+```bash
+export DSH_HOME="$SMOKE_DIR/dsh-home"
+dsh plugin --profile web add @softspark/dsh-codex@X.Y.Z --save-exact --ignore-scripts
+dsh --profile web --dump-default-config
+dsh --profile web --no-open --host 127.0.0.1 --port 0
+```
+
+Version `1.4.0` uses DSH `0.1.1-rc.2`. Candidate `1.5.0` supports that host and `0.1.2-rc.1`; run against each claimed host after publication.
 
 - [ ] Provider ID `codex` loads without another provider configuration.
 - [ ] Model discovery returns the tested model set.
@@ -83,11 +94,11 @@ Set `DSH_HOME` to a disposable path. Install the released tarball into the teste
 - [ ] DSH and Codex approval or sandbox prompts are not silently bypassed.
 - [ ] Stable mode advertises no DSH tools; dynamic tools appear only when `experimentalDynamicTools: true` is configured.
 
-Do not improvise the DSH install command. Copy it from the release-tested setup document after it exists.
+Keep the native Codex login outside this profile. Never copy credential files into the test directory.
 
 ## Verification
 
-Record the npm version, integrity, provenance result, signature result, Node version, Codex version, DSH version, authentication mode, model ID, and smoke result in the GitHub Release verification note.
+Record the npm version, integrity, provenance result, signature result, Node/npm/pnpm versions, Codex version, DSH version, authentication mode, model ID, cancellation and smoke result in a dated KB verification record and link it from the GitHub Release. Separate published-artifact results, local candidate results, and unexecuted checks. See the [2026-09-06 record](verification-2026-09-06.md).
 
 ## Rollback
 

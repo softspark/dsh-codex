@@ -1,5 +1,4 @@
 import {
-  CallId,
   LlmError,
   LlmRuntime,
   MessageId,
@@ -9,6 +8,7 @@ import {
 } from '@deepseek-ai/dsh-llm'
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
+import { toolCallId as CallId } from '../src/dsh-compat.js'
 
 import {
   CODEX_PROVIDER,

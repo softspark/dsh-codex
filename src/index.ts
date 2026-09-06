@@ -20,6 +20,7 @@ import {
 } from './adapter.js'
 import { AppServerClient } from './app-server/client.js'
 import { ChildProcessTransport } from './app-server/transport.js'
+import { sessionEvents } from './dsh-compat.js'
 import type {
   CodexApprovalPolicy,
   CodexSandboxMode,
@@ -252,7 +253,7 @@ export function apply(ctx: Context, config: Config = {}): void {
           sessionPermissions: (sessionId) => {
             if (sessionId === undefined) return undefined
             const session = sessions?.get(SessionId(String(sessionId)))
-            return resolveSessionPermissions(fallbackPermissions, session?.events)
+            return resolveSessionPermissions(fallbackPermissions, sessionEvents(session))
           },
         }
       : {}),

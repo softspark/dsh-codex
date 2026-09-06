@@ -2,6 +2,7 @@
 title: "dsh-codex Security Model"
 category: reference
 service: dsh-codex
+version: "1.0.0"
 tags: [security, credentials, subprocess, json-rpc, tools]
 created: "2026-08-26"
 last_updated: "2026-08-26"

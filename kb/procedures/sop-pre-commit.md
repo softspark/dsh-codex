@@ -2,6 +2,7 @@
 title: "SOP: Pre-Commit Quality Gate"
 category: procedures
 service: dsh-codex
+version: "1.0.0"
 tags: [sop, pre-commit, testing, security, packaging]
 created: "2026-08-26"
 last_updated: "2026-08-26"

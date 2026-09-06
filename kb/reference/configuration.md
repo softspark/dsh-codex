@@ -2,9 +2,10 @@
 title: "dsh-codex Configuration Reference"
 category: reference
 service: dsh-codex
+version: "1.0.0"
 tags: [configuration, dsh, codex, models, authentication]
 created: "2026-08-26"
-last_updated: "2026-08-26"
+last_updated: "2026-09-06"
 description: "Documents the implemented provider schema, environment allowlist, replay behavior, and tested defaults."
 ---
 
@@ -28,7 +29,7 @@ OpenAI documents ChatGPT sign-in as the subscription-backed mode. API-key sign-i
 
 ## Provider identity
 
-The Cordis patch registers provider ID `codex`. Isolated DSH composition loaded the provider, exposed seven models, and completed an end-to-end prompt. The package remains source and local-tar only until publication.
+The Cordis patch registers provider ID `codex`. Version `1.4.0` is published for DSH `0.1.1-rc.2`; candidate `1.5.0` also supports `0.1.2-rc.1`. See the [current verification record](../procedures/verification-2026-09-06.md) for checks on each artifact.
 
 ## App-server controls
 
@@ -41,7 +42,7 @@ The implemented plugin fields are:
 | `cwd` | `process.cwd()` | Working directory for Codex threads. |
 | `sandbox` | `workspace-write` | Also accepts `read-only` and `danger-full-access`. |
 | `approvalPolicy` | `untrusted` | Also accepts `never` and `on-request`. |
-| `inheritSessionPermissions` | `false` | For newly started or resumed threads, use an explicit DSH session sandbox override and translate only DSH `never` to Codex `never`; otherwise keep the static fallback. |
+| `inheritSessionPermissions` | `false` | For newly started or resumed threads, read the newest event for each permission. Translate only DSH `never` to Codex `never`; interactive or invalid latest values keep the static fallback and never restore an older grant. |
 | `allowApiKeyAuth` | `false` | Permits an API-key login already owned by Codex; it does not expose an API key to the plugin or child environment. |
 | `experimentalDynamicTools` | `false` | Enables the experimental DSH tool bridge and app-server experimental API. |
 | `dynamicToolTimeoutMs` | `600000` | Integer from 1,000 through 3,600,000 ms for deferred tool calls and their incoming server requests. |

@@ -4,13 +4,19 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![DSH community plugin](https://img.shields.io/badge/DSH-community%20plugin-4b8bbe.svg)](https://github.com/topics/dsh-plugin)
 
-`@softspark/dsh-codex` connects DeepSeek Harness to a locally authenticated Codex app server. Provider ID `codex` is implemented and verified for the `1.0.0` public release.
+`@softspark/dsh-codex` connects DeepSeek Harness to a locally authenticated Codex app server under provider ID `codex`.
 
 Version `1.0.0` is the first public release. The plugin does not implement OAuth, read Codex authentication files, copy tokens, call the OpenAI Responses API directly, or emit telemetry.
 
 This is an independently maintained SoftSpark community integration. It is unofficial and is not affiliated with or endorsed by OpenAI or DeepSeek.
 
-## Verified status
+## What's new
+
+The `1.5.0` candidate adds DSH `0.1.2-rc.1` compatibility and prevents older session permissions from overriding a newer interactive or invalid policy. DSH `0.1.1-rc.2` remains supported. Published `1.4.0` requires the older DSH host; use a local candidate tarball for the new host until `1.5.0` is published.
+
+Current artifact checks and runtime limitations are recorded in [verification on 2026-09-06](kb/procedures/verification-2026-09-06.md).
+
+## Historical verification
 
 The 2026-08-26 verification run produced this evidence:
 
@@ -23,7 +29,7 @@ The 2026-08-26 verification run produced this evidence:
 - A DSH session survived a host restart with the same Codex thread ID, and a live cancellation ended as `aborted`.
 - The user screenshot showed GPT-5.6-Sol with `xhigh` reasoning.
 
-These results verify the source build and release artifact. Registry provenance and installation are verified separately by the post-release SOP.
+These results describe the original `1.0.0` verification only. Later releases require their own source and published-artifact checks.
 
 ## Requirements
 
@@ -32,7 +38,7 @@ These results verify the source build and release artifact. Registry provenance 
 - `pnpm` available to the DSH profile plugin manager.
 - A local Codex CLI that can start `codex app-server`.
 - An existing Codex login managed by the Codex CLI.
-- DeepSeek Harness compatible with `@deepseek-ai/dsh-llm@0.1.1-rc.2` and `@deepseek-ai/cordis@4.0.1`.
+- DeepSeek Harness `0.1.1-rc.2` or `0.1.2-rc.1`, with matching attachment, LLM and session seams and `@deepseek-ai/cordis@4.0.2`.
 
 For subscription-backed use, `codex login status` must report ChatGPT.
 
@@ -67,10 +73,10 @@ With DSH profiles configured as `autoInstallPeers=false`, a pnpm peer check can 
 Install the exact reviewed version into a DSH profile:
 
 ```bash
-dsh plugin --profile web add @softspark/dsh-codex@1.0.0 --save-exact
+dsh plugin --profile web add @softspark/dsh-codex@1.4.0 --save-exact
 ```
 
-Restart DSH after installation. Do not install an unpinned prerelease in production profiles.
+This command installs the current published artifact for DSH `0.1.1-rc.2`. The `1.5.0` candidate must be tested from its local tarball before publication. Restart DSH after installation.
 
 ## Architecture
 

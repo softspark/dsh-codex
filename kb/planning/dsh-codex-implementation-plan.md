@@ -2,6 +2,7 @@
 title: "dsh-codex Implementation Plan"
 category: planning
 service: dsh-codex
+version: "1.0.0"
 tags: [planning, implementation, dsh, codex, release]
 created: "2026-08-26"
 last_updated: "2026-08-27"

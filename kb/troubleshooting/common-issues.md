@@ -2,6 +2,7 @@
 title: "dsh-codex Common Issues"
 category: troubleshooting
 service: dsh-codex
+version: "1.0.0"
 tags: [troubleshooting, node, codex, authentication, dsh, timeouts, images]
 created: "2026-08-26"
 last_updated: "2026-09-02"

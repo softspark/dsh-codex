@@ -2,7 +2,10 @@
 
 ## Supported versions
 
-Version `1.0.0` receives security fixes on `main`.
+The latest published `1.x` release receives security fixes on `main`. Earlier
+releases must upgrade to the latest patch or minor release. See [CHANGELOG.md](CHANGELOG.md)
+for the release history and the [post-release verification record](kb/procedures/verification-2026-09-06.md)
+for the tested artifacts and remaining runtime checks.
 
 ## Reporting a vulnerability
 

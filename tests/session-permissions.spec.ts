@@ -53,6 +53,20 @@ describe('resolveSessionPermissions', () => {
     ))).toBe(FALLBACK)
   })
 
+  it.each(['ask', 'unknown', undefined])('does not restore an older never policy after %s', (policy) => {
+    expect(resolveSessionPermissions(FALLBACK, events(
+      { type: 'approval/policy', data: { policy: 'never' } },
+      { type: 'approval/policy', data: { policy } },
+    ))).toEqual(FALLBACK)
+  })
+
+  it('does not restore older full access after an invalid newest sandbox event', () => {
+    expect(resolveSessionPermissions(FALLBACK, events(
+      { type: 'sandbox/mode', data: { mode: 'danger-full-access' } },
+      { type: 'sandbox/mode', data: null },
+    ))).toEqual(FALLBACK)
+  })
+
   it('ignores malformed extension events', () => {
     expect(resolveSessionPermissions(FALLBACK, events(
       { type: 'sandbox/mode', data: { mode: 'unconfined' } },

@@ -27,19 +27,21 @@ export function resolveSessionPermissions(
     const event = events[index]
     if (!isRecord(event)) continue
     const data = event['data']
-    if (!isRecord(data)) continue
 
     if (sandbox === undefined && event['type'] === 'sandbox/mode') {
-      const mode = data['mode']
-      if (isSandboxMode(mode)) sandbox = mode
+      const mode = isRecord(data) ? data['mode'] : undefined
+      sandbox = isSandboxMode(mode) ? mode : fallback.sandbox
     }
     if (approvalPolicy === undefined && event['type'] === 'approval/policy') {
-      if (data['policy'] === 'never') approvalPolicy = 'never'
+      approvalPolicy = isRecord(data) && data['policy'] === 'never'
+        ? 'never'
+        : fallback.approvalPolicy
     }
     if (sandbox !== undefined && approvalPolicy !== undefined) break
   }
 
-  if (sandbox === undefined && approvalPolicy === undefined) return fallback
+  if ((sandbox === undefined || sandbox === fallback.sandbox)
+    && (approvalPolicy === undefined || approvalPolicy === fallback.approvalPolicy)) return fallback
   return {
     sandbox: sandbox ?? fallback.sandbox,
     approvalPolicy: approvalPolicy ?? fallback.approvalPolicy,
