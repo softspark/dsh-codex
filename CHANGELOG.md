@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-09-08
+
+### Fixed
+
+- Refusal reasons for dynamic tool calls now reach stderr, where a container log shows them. `onRejectedToolCall` wrote only to the plugin's Cordis logger, and a Cordis logger dispatches to registered exporters and drops the message when there are none — the loop is over an empty map. No host-plane package in DeepSeek Harness registers an exporter, so from 1.0.0 to 1.6.0 every reason was recorded into nothing while the code's own comment promised it was readable in the log.
+- The failure this hid is the one it was written for: Codex renders every refusal as `dynamic tool request failed` with no reason, so a session that refused all its calls is indistinguishable from one that timed out. Two investigations were spent looking for a diagnosis that was never written down.
+- The logger call stays, so the reason also lands in a real log the day an exporter is mounted. The reporter is now `reportRejectedToolCall`, exported and covered by tests — including one that drives it with a real exporter-less Cordis logger.
+
 ## [1.6.0] - 2026-09-08
 
 ### Fixed

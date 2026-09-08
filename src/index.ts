@@ -187,6 +187,42 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
   }
 }
 
+/**
+ * Report one refused dynamic tool call somewhere a person will actually see it.
+ *
+ * Codex renders every refusal as its own `dynamic tool request failed`, with no
+ * reason attached, so a session that refused all seven of its calls looks the
+ * same as one that timed out.
+ *
+ * The stderr write is the load-bearing half. A Cordis logger dispatches to
+ * registered exporters and drops the message when there are none — the loop is
+ * over an empty map — and no host-plane package in the harness registers one.
+ * Between 1.0.0 and 1.6.0 this seam therefore recorded every refusal reason
+ * into nothing, which is worse than having no seam at all: the code promised a
+ * diagnosis that was never written down, and two investigations were spent
+ * looking for it.
+ *
+ * The logger call stays, so the reason lands in a real log the day an exporter
+ * is mounted.
+ *
+ * @param logger - the plugin's Cordis logger.
+ * @param failure - the refusal class, its message, and the tool when known.
+ * @param write - sink for the human-readable line; defaults to stderr.
+ */
+export function reportRejectedToolCall(
+  logger: { readonly warn: (format: string, ...args: readonly unknown[]) => void },
+  failure: {
+    readonly code: string
+    readonly message: string
+    readonly tool?: string
+  },
+  write: (line: string) => void = (line) => void process.stderr.write(line),
+): void {
+  const where = failure.tool === undefined ? '' : ` (${failure.tool})`
+  logger.warn('dynamic tool call refused: %s%s — %s', failure.code, where, failure.message)
+  write(`dsh-codex: dynamic tool call refused: ${failure.code}${where} — ${failure.message}\n`)
+}
+
 export function apply(ctx: Context, config: Config = {}): void {
   const resolved = resolveConfig(config)
   const transport = new ChildProcessTransport({
@@ -258,16 +294,23 @@ export function apply(ctx: Context, config: Config = {}): void {
         }
       : {}),
     // Codex renders every refusal as its own `dynamic tool request failed`,
-    // with no reason. A session that refused all seven of its tool calls was
+    // with no reason. A session that refused all seven of its tool calls is
     // indistinguishable from one that timed out; this is where the reason
-    // becomes readable, in `make logs`, independent of what Codex displays.
-    onRejectedToolCall: ({ code, message, tool }) => {
-      logger.warn(
-        'dynamic tool call refused: %s%s — %s',
-        code,
-        tool === undefined ? '' : ` (${tool})`,
-        message,
-      )
+    // becomes readable, independent of what Codex displays.
+    //
+    // Written to stderr as well as to the logger, and that is the load-bearing
+    // half. A Cordis logger dispatches to registered exporters and drops the
+    // message when there are none — `for (const exporter of exporters.values())`
+    // over an empty map — and no host-plane package in the harness registers
+    // one. Between 1.0.0 and 1.6.0 this seam therefore recorded every refusal
+    // reason into nothing, which is worse than having no seam: the comment
+    // above promised a diagnosis that was never written down, and two
+    // investigations were spent looking for it.
+    //
+    // The logger call stays, so the reason lands in a real log the day an
+    // exporter is mounted.
+    onRejectedToolCall: (failure) => {
+      reportRejectedToolCall(logger, failure)
     },
     requestTimeoutMs: resolved.requestTimeoutMs,
     turnTimeoutMs: resolved.turnTimeoutMs,
