@@ -1096,7 +1096,12 @@ describe('experimental dynamic-tool bridge', () => {
     // with no reason attached, so a session that refused all seven of its
     // calls was indistinguishable from one that timed out. This seam is what
     // makes the failure class readable outside Codex's own wording.
-    const refusals: { code: string, tool?: string }[] = []
+    const refusals: {
+      code: string
+      tool?: string
+      threadId?: string
+      message: string
+    }[] = []
     const fake = createFakeClient()
     const adapter = new CodexAdapter({
       client: fake.client,
