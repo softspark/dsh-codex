@@ -6,6 +6,7 @@ import {
   type Message,
   type StreamChunk,
 } from '@deepseek-ai/dsh-llm'
+import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import { toolCallId as CallId } from '../src/dsh-compat.js'
@@ -147,7 +148,11 @@ function createFakeClient() {
 
 type FakeClient = ReturnType<typeof createFakeClient>
 
-function createAdapter(fake: FakeClient, experimentalDynamicTools: boolean): CodexAdapter {
+function createAdapter(
+  fake: FakeClient,
+  experimentalDynamicTools: boolean,
+  attachments?: AttachmentStore,
+): CodexAdapter {
   return new CodexAdapter({
     client: fake.client,
     cwd: '/workspace',
@@ -157,7 +162,46 @@ function createAdapter(fake: FakeClient, experimentalDynamicTools: boolean): Cod
     requestTimeoutMs: 100,
     turnTimeoutMs: 1_000,
     experimentalDynamicTools,
+    ...(attachments === undefined ? {} : { attachments: () => attachments }),
   })
+}
+
+const IMAGE_BYTES = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10])
+const IMAGE_BASE64 = Buffer.from(IMAGE_BYTES).toString('base64')
+
+function imageStore(): {
+  readonly store: AttachmentStore
+  readonly readImageRequest: ReturnType<typeof vi.fn>
+} {
+  const readImageRequest = vi.fn(async () => ({
+    data: IMAGE_BYTES,
+    mediaType: 'image/png',
+  }))
+  return { store: { readImageRequest } as unknown as AttachmentStore, readImageRequest }
+}
+
+/** A tool result carrying a caption and a screenshot, as a browser tool returns. */
+function imageToolResultMessage(id: string, callId: string, text: string): Message {
+  return {
+    ...toolResultMessage(id, callId, text),
+    content: [{
+      type: 'tool-result',
+      toolCallId: CallId(callId),
+      content: [
+        { type: 'text', text },
+        {
+          type: 'image',
+          attachment: {
+            attachmentId: 'attachment-1',
+            mediaType: 'image/png',
+            bytes: IMAGE_BYTES.byteLength,
+            width: 2,
+            height: 2,
+          },
+        },
+      ],
+    }],
+  } as Message
 }
 
 function userMessage(id: string, text: string): Message {
@@ -651,18 +695,6 @@ describe('experimental dynamic-tool bridge', () => {
 
   it.each([
     [
-      'non-text content',
-      {
-        ...toolResultMessage('result-unsupported', 'call-claude', ''),
-        content: [{
-          type: 'tool-result',
-          toolCallId: CallId('call-claude'),
-          content: [{ type: 'reasoning', text: 'not a result' }],
-        }],
-      } as Message,
-      'DYNAMIC_TOOL_RESULT_UNSUPPORTED',
-    ],
-    [
       'oversized text',
       toolResultMessage(
         'result-large',
@@ -684,6 +716,84 @@ describe('experimental dynamic-tool bridge', () => {
     ])))).rejects.toMatchObject({ failure: { code } })
     await adapter.close()
     await responseFailure
+  })
+
+  // A screenshot must not be able to end a session. The result is already in
+  // the transcript, so throwing here fails every later turn on the same message
+  // and the replay path refuses the thread outright.
+  it('forwards an image tool result as an image, alongside its text', async () => {
+    const fake = createFakeClient()
+    const { store, readImageRequest } = imageStore()
+    const adapter = createAdapter(fake, true, store)
+    const { initialUser, response } = await beginDynamicCall(fake, adapter)
+
+    const stream = collect(adapter.stream(options([
+      initialUser,
+      assistantToolCallMessage('call-claude'),
+      imageToolResultMessage('result-image', 'call-claude', 'the page renders'),
+    ])))
+
+    await expect(response).resolves.toMatchObject({
+      contentItems: [
+        { type: 'inputText', text: 'the page renders' },
+        { type: 'inputImage', imageUrl: `data:image/png;base64,${IMAGE_BASE64}` },
+      ],
+      success: true,
+    })
+    expect(readImageRequest).toHaveBeenCalled()
+    await adapter.close()
+    await stream.catch(() => undefined)
+  })
+
+  it('describes a block it cannot carry instead of failing the turn', async () => {
+    const fake = createFakeClient()
+    const adapter = createAdapter(fake, true)
+    const { initialUser, response } = await beginDynamicCall(fake, adapter)
+
+    const stream = collect(adapter.stream(options([
+      initialUser,
+      assistantToolCallMessage('call-claude'),
+      {
+        ...toolResultMessage('result-unsupported', 'call-claude', ''),
+        content: [{
+          type: 'tool-result',
+          toolCallId: CallId('call-claude'),
+          content: [{ type: 'reasoning', text: 'not a result' }],
+        }],
+      } as Message,
+    ])))
+
+    await expect(response).resolves.toMatchObject({
+      contentItems: [{
+        type: 'inputText',
+        text: '[reasoning content omitted: this bridge carries text and images]',
+      }],
+      success: true,
+    })
+    await adapter.close()
+    await stream.catch(() => undefined)
+  })
+
+  it('reports a missing attachment store in the text rather than failing', async () => {
+    const fake = createFakeClient()
+    const adapter = createAdapter(fake, true)
+    const { initialUser, response } = await beginDynamicCall(fake, adapter)
+
+    const stream = collect(adapter.stream(options([
+      initialUser,
+      assistantToolCallMessage('call-claude'),
+      imageToolResultMessage('result-image', 'call-claude', 'the page renders'),
+    ])))
+
+    await expect(response).resolves.toMatchObject({
+      contentItems: [{
+        type: 'inputText',
+        text: 'the page renders[image omitted: no attachment store is configured]',
+      }],
+      success: true,
+    })
+    await adapter.close()
+    await stream.catch(() => undefined)
   })
 
   it('rejects unknown, namespaced, oversized and malformed server calls', async () => {

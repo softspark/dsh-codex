@@ -4,7 +4,15 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.0] - Unreleased
+## [1.6.0] - 2026-09-08
+
+### Fixed
+
+- A dynamic tool result carrying an image no longer ends the session. The bridge refused every block but `text` with `DYNAMIC_TOOL_RESULT_UNSUPPORTED`, and that refusal is terminal rather than local: the result is already in the transcript when it is validated, so every later turn re-enters the same throw, and the replay path refuses a dynamic-tool thread outright. One screenshot from an MCP tool made a session unresumable.
+- Images now travel as `inputImage` alongside their caption. The plumbing existed on both sides — the app-server type, the serializer, and the attachment-to-data-URL helper the user-message path already used — and only the result parser threw it away.
+- A block the bridge still cannot carry is described in the text it replaces instead of failing the turn, and a missing attachment store is reported the same way. The model is told what it did not receive and can finish from the caption.
+
+## [1.5.0] - 2026-09-06
 
 ### Added
 

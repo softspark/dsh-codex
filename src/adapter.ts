@@ -35,6 +35,7 @@ import type {
   CodexSandboxMode,
   CodexTokenUsageBreakdown,
   ExperimentalDynamicToolCall,
+  ExperimentalDynamicToolOutput,
   ExperimentalDynamicToolResult,
   ExperimentalDynamicToolSpec,
   JsonObject,
@@ -439,7 +440,12 @@ export class CodexAdapter extends LlmAdapter {
       throw new LlmError('Dynamic tool turn is no longer live', 'DYNAMIC_TOOL_STATE_LOST')
     }
     try {
-      const batch = validateToolResultBatch(options, state, turn)
+      const batch = await validateToolResultBatch(
+        options,
+        state,
+        turn,
+        this.attachments?.(),
+      )
       for (const item of batch.items) item.pending.respond(item.result)
       state.lastSeenUserMessageId = batch.lastMessageId
       yield* this.consumePendingTurn(turn)
@@ -1185,11 +1191,12 @@ function assertDynamicToolCallId(value: string): void {
   }
 }
 
-function validateToolResultBatch(
+async function validateToolResultBatch(
   options: GenerateOptions,
   state: SessionState,
   turn: PendingTurn,
-): ValidatedToolResultBatch {
+  store: AttachmentStore | undefined,
+): Promise<ValidatedToolResultBatch> {
   const catalog = buildToolCatalog(options.tools ?? [])
   if (state.toolCatalog === undefined) {
     throw new LlmError('Dynamic tool state has no catalog', 'DYNAMIC_TOOL_STATE_LOST')
@@ -1236,7 +1243,7 @@ function validateToolResultBatch(
   let resultBytes = 0
 
   for (const message of toolMessages) {
-    const parsed = parseTextToolResultMessage(message)
+    const parsed = parseToolResultMessage(message)
     assertDynamicToolCallId(parsed.callId)
     if (seen.has(parsed.callId)) {
       throw new LlmError(
@@ -1261,12 +1268,30 @@ function validateToolResultBatch(
         'DYNAMIC_TOOL_RESULT_TOO_LARGE',
       )
     }
+    // Images ride alongside the text rather than replacing it: a screenshot
+    // tool usually returns both, and the caption is what makes the picture
+    // legible. Without a store the reference cannot be read at all, so say so
+    // in the text — the alternative is failing a turn the model could still
+    // finish from the caption alone.
+    const contentItems: ExperimentalDynamicToolOutput[] = []
+    const notes: string[] = []
+    for (const ref of parsed.images) {
+      if (store === undefined) {
+        notes.push('[image omitted: no attachment store is configured]')
+        continue
+      }
+      contentItems.push({
+        type: 'inputImage',
+        imageUrl: await imageDataUrl(store, ref, turn.signal),
+      })
+    }
+    const text = [parsed.text, ...notes].join('')
+    if (text.length > 0 || contentItems.length === 0) {
+      contentItems.unshift({ type: 'inputText', text })
+    }
     items.push({
       pending,
-      result: {
-        contentItems: [{ type: 'inputText', text: parsed.text }],
-        success: !parsed.isError,
-      },
+      result: { contentItems, success: !parsed.isError },
     })
   }
 
@@ -1280,9 +1305,18 @@ function validateToolResultBatch(
   return { items, lastMessageId: String(lastMessage.id) }
 }
 
-function parseTextToolResultMessage(message: Message): {
+/**
+ * One tool result, split into what Codex can carry.
+ *
+ * `images` are kept as references rather than data URLs: reading an attachment
+ * is async and policy-checked, and this function is the validation pass, which
+ * must stay cheap and total. The batch resolves them once it knows the result
+ * is going to be sent at all.
+ */
+function parseToolResultMessage(message: Message): {
   readonly callId: string
   readonly text: string
+  readonly images: readonly ImageAttachmentRef[]
   readonly isError: boolean
 } {
   if (message.source.kind !== 'tool' || message.content.length !== 1) {
@@ -1304,19 +1338,28 @@ function parseTextToolResultMessage(message: Message): {
       'DYNAMIC_TOOL_RESULT_INVALID',
     )
   }
+  // A block this bridge cannot carry must not throw. The tool result is already
+  // in the transcript, so a throw here fails every later turn on the same
+  // message and the replay path refuses a dynamic-tool thread outright — the
+  // session becomes unresumable over a screenshot. Describing the block instead
+  // keeps the turn alive and tells the model exactly what it did not receive.
   const texts: string[] = []
+  const images: ImageAttachmentRef[] = []
   for (const block of result.content) {
-    if (block.type !== 'text') {
-      throw new LlmError(
-        `Dynamic tool result block "${block.type}" is not supported; text only`,
-        'DYNAMIC_TOOL_RESULT_UNSUPPORTED',
-      )
+    if (block.type === 'text') {
+      texts.push(block.text)
+      continue
     }
-    texts.push(block.text)
+    if (block.type === 'image') {
+      images.push(block.attachment)
+      continue
+    }
+    texts.push(`[${block.type} content omitted: this bridge carries text and images]`)
   }
   return {
     callId: String(result.toolCallId),
     text: texts.join(''),
+    images,
     isError: result.isError === true,
   }
 }

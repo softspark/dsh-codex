@@ -41,7 +41,7 @@ In stable mode, valid same-provider replay state may resume a Codex thread after
 
 ### Tool boundary
 
-Experimental dynamic tools are disabled by default. When explicitly enabled, catalog names, descriptions, schemas, arguments, call IDs, pending counts, per-turn counts, result batches, and timeouts are bounded. Results are validated as one atomic text-only batch before any app-server response. DSH remains the sole tool executor under its normal agent, sandbox, approval, logging, and persistence path.
+Experimental dynamic tools are disabled by default. When explicitly enabled, catalog names, descriptions, schemas, arguments, call IDs, pending counts, per-turn counts, result batches, and timeouts are bounded. Results are validated as one atomic batch before any app-server response; text and images are carried, every other block is reduced to a description of itself, and the size bound is enforced over the text. DSH remains the sole tool executor under its normal agent, sandbox, approval, logging, and persistence path.
 
 A dynamic-tool thread cannot be restored after process loss. Restart-time continuation fails closed instead of attaching tools or results to an older or different Codex turn. Aborts, handler timeouts, invalid batches, and adapter close reject every pending call and interrupt the Codex turn exactly once.
 
