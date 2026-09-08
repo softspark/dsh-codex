@@ -1107,8 +1107,13 @@ describe('experimental dynamic-tool bridge', () => {
       experimentalDynamicTools: true,
       requestTimeoutMs: 100,
       turnTimeoutMs: 1_000,
-      onRejectedToolCall: ({ code, tool }) => {
-        refusals.push(tool === undefined ? { code } : { code, tool })
+      onRejectedToolCall: ({ code, tool, message, threadId }) => {
+        refusals.push({
+          code,
+          ...(tool === undefined ? {} : { tool }),
+          ...(threadId === undefined ? {} : { threadId }),
+          message,
+        })
       },
     })
 
@@ -1127,8 +1132,18 @@ describe('experimental dynamic-tool bridge', () => {
       },
     })).rejects.toMatchObject({ code: 'DYNAMIC_TOOL_STATE_LOST' })
 
+    // The thread and the *reason* are the point. A refusal that says only
+    // "no live turn" leaves the two causes — a thread this adapter never
+    // tracked, and a turn that closed under it — reading identically, which is
+    // the question rather than the answer.
     expect(refusals).toEqual([
-      { code: 'DYNAMIC_TOOL_STATE_LOST', tool: 'skill' },
+      {
+        code: 'DYNAMIC_TOOL_STATE_LOST',
+        tool: 'skill',
+        threadId: 'thread-unknown',
+        message: 'Dynamic tool call has no live Codex turn — thread is not tracked'
+          + ' by this adapter (tracking 0: none)',
+      },
     ])
     await adapter.close()
   })

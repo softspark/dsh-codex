@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-09-08
+
+### Fixed
+
+- Every refused dynamic tool call now names the Codex thread it arrived on. Without it, `DYNAMIC_TOOL_STATE_LOST` stated the question rather than the answer: some turn was missing, and nothing said which thread, so a second Codex thread and a turn that closed early read identically.
+- `DYNAMIC_TOOL_STATE_LOST` also says which of its two causes fired — a thread this adapter never tracked, listing the ids it does track, or a turn already closed. The two want different investigations and had one message between them.
+
+### Changed
+
+- `onRejectedToolCall` receives an optional `threadId`, present for every refusal that got as far as parsing the call. Additive; existing handlers are unaffected.
+
 ## [1.6.1] - 2026-09-08
 
 ### Fixed

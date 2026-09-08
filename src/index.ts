@@ -215,12 +215,18 @@ export function reportRejectedToolCall(
     readonly code: string
     readonly message: string
     readonly tool?: string
+    readonly threadId?: string
   },
   write: (line: string) => void = (line) => void process.stderr.write(line),
 ): void {
   const where = failure.tool === undefined ? '' : ` (${failure.tool})`
-  logger.warn('dynamic tool call refused: %s%s — %s', failure.code, where, failure.message)
-  write(`dsh-codex: dynamic tool call refused: ${failure.code}${where} — ${failure.message}\n`)
+  // The thread trails the message rather than joining the parenthesis: it is
+  // the field you correlate across lines, and a reader scanning for a repeated
+  // id should not have to find it mid-sentence.
+  const thread = failure.threadId === undefined ? '' : ` [thread ${failure.threadId}]`
+  const line = `dynamic tool call refused: ${failure.code}${where} — ${failure.message}${thread}`
+  logger.warn('%s', line)
+  write(`dsh-codex: ${line}\n`)
 }
 
 export function apply(ctx: Context, config: Config = {}): void {

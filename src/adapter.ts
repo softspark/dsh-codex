@@ -123,11 +123,17 @@ export interface CodexAdapterOptions {
    * and a duplicate id. A session that failed every call for two and a half
    * minutes could not be told apart from one that timed out. This is the seam
    * that puts the reason somewhere a person can read it.
+   *
+   * `threadId` is present for every refusal that got as far as parsing the
+   * call. Without it a `DYNAMIC_TOOL_STATE_LOST` says only that some turn was
+   * missing, which is the question rather than the answer: the thread it names
+   * is what separates a second Codex thread from a turn that closed early.
    */
   readonly onRejectedToolCall?: (failure: {
     readonly code: string
     readonly message: string
     readonly tool?: string
+    readonly threadId?: string
   }) => void
 }
 
@@ -657,11 +663,13 @@ export class CodexAdapter extends LlmAdapter {
     code: string,
     message: string,
     tool?: string,
+    threadId?: string,
   ): Promise<JsonValue> {
     this.onRejectedToolCall?.({
       code,
       message,
       ...(tool === undefined ? {} : { tool }),
+      ...(threadId === undefined ? {} : { threadId }),
     })
     return Promise.reject(new LlmError(message, code))
   }
@@ -684,10 +692,20 @@ export class CodexAdapter extends LlmAdapter {
     }
     const turn = this.turnsByThread.get(call.threadId)
     if (turn === undefined || turn.closed) {
+      // The two causes want different investigations and used to read the same,
+      // which cost a real diagnosis: a thread this adapter never tracked points
+      // at a second Codex thread or a call outliving a restart, while a closed
+      // turn points at the turn lifecycle. The tracked ids come along because
+      // "unknown" is only meaningful next to what is known.
+      const tracked = [...this.turnsByThread.keys()]
+      const why = turn === undefined
+        ? `thread is not tracked by this adapter (tracking ${String(tracked.length)}: ${tracked.join(', ') || 'none'})`
+        : 'its turn is already closed'
       return this.refuseToolCall(
         'DYNAMIC_TOOL_STATE_LOST',
-        'Dynamic tool call has no live Codex turn',
+        `Dynamic tool call has no live Codex turn — ${why}`,
         call.tool,
+        call.threadId,
       )
     }
     if (turn.turnId !== undefined && call.turnId !== turn.turnId) {
@@ -695,6 +713,7 @@ export class CodexAdapter extends LlmAdapter {
         'DYNAMIC_TOOL_PROTOCOL',
         'Dynamic tool call references another Codex turn',
         call.tool,
+        call.threadId,
       )
     }
     if (call.namespace !== null) {
@@ -702,6 +721,7 @@ export class CodexAdapter extends LlmAdapter {
         'DYNAMIC_TOOL_NAMESPACE_UNSUPPORTED',
         'Namespaced dynamic tools are not supported',
         call.tool,
+        call.threadId,
       )
     }
     if (turn.state.toolCatalog?.byName.has(call.tool) !== true) {
@@ -709,6 +729,7 @@ export class CodexAdapter extends LlmAdapter {
         'DYNAMIC_TOOL_UNKNOWN',
         `Codex requested unknown dynamic tool "${call.tool}"`,
         call.tool,
+        call.threadId,
       )
     }
     if (turn.seenCallIds.has(call.callId)) {
@@ -716,6 +737,7 @@ export class CodexAdapter extends LlmAdapter {
         'DYNAMIC_TOOL_DUPLICATE',
         `Duplicate dynamic tool call id "${call.callId}"`,
         call.tool,
+        call.threadId,
       )
     }
     if (turn.pendingCalls.size >= MAX_PENDING_DYNAMIC_TOOL_CALLS) {
@@ -723,6 +745,7 @@ export class CodexAdapter extends LlmAdapter {
         'DYNAMIC_TOOL_PENDING_LIMIT',
         `Dynamic tool pending-call limit ${MAX_PENDING_DYNAMIC_TOOL_CALLS} exceeded`,
         call.tool,
+        call.threadId,
       )
     }
     turn.dynamicCallCount += 1
@@ -731,6 +754,7 @@ export class CodexAdapter extends LlmAdapter {
         'DYNAMIC_TOOL_CALL_LIMIT',
         `Dynamic tool turn-call limit ${MAX_DYNAMIC_TOOL_CALLS_PER_TURN} exceeded`,
         call.tool,
+        call.threadId,
       )
     }
     const argumentBytes = utf8Bytes(JSON.stringify(call.arguments))
@@ -739,6 +763,7 @@ export class CodexAdapter extends LlmAdapter {
         'DYNAMIC_TOOL_ARGUMENTS_TOO_LARGE',
         `Dynamic tool arguments exceed ${MAX_DYNAMIC_TOOL_ARGUMENT_BYTES} UTF-8 bytes`,
         call.tool,
+        call.threadId,
       )
     }
 

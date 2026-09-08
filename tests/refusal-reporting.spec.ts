@@ -67,4 +67,24 @@ describe('reportRejectedToolCall', () => {
       stderr.mockRestore()
     }
   })
+
+  it('trails the thread id, which is the field a reader correlates across lines', () => {
+    const write = vi.fn()
+
+    reportRejectedToolCall(
+      { warn: vi.fn() },
+      {
+        code: 'DYNAMIC_TOOL_STATE_LOST',
+        message: 'Dynamic tool call has no live Codex turn — its turn is already closed',
+        tool: 'skill',
+        threadId: 'thread-42',
+      },
+      write,
+    )
+
+    expect(write).toHaveBeenCalledWith(
+      'dsh-codex: dynamic tool call refused: DYNAMIC_TOOL_STATE_LOST (skill) — '
+      + 'Dynamic tool call has no live Codex turn — its turn is already closed [thread thread-42]\n',
+    )
+  })
 })
