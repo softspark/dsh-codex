@@ -5,7 +5,7 @@ service: dsh-codex
 version: "1.0.0"
 tags: [security, credentials, subprocess, json-rpc, tools]
 created: "2026-08-26"
-last_updated: "2026-08-26"
+last_updated: "2026-09-24"
 description: "Defines credential ownership, environment minimization, replay validation, process termination, and tool boundaries."
 ---
 
@@ -68,7 +68,7 @@ Session permission inheritance is separately opt-in. For a newly started or resu
 
 ## Supply chain
 
-The package uses exact dependency versions and a lockfile. npm lifecycle scripts are disabled. CI runs high-severity dependency audit, signature verification, SARIF generation, multi-OS tests, and package inspection. Tagged publication uses npm provenance.
+The package uses exact dependency versions and a lockfile. npm lifecycle scripts are disabled. The release script (`npm run release`) runs high-severity dependency audit, signature verification, SARIF generation, tests on macOS and in a Linux container, and package inspection before it creates a tag. GitHub Actions only publishes the tag, with npm provenance.
 
 See the SoftSpark module SOP: [PATH: shared/rag-mcp/procedures/softspark-module-template.md].
 
